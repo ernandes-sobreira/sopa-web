@@ -454,15 +454,38 @@ function initFirebase(config) {
     storage = firebase.storage();
     FIREBASE_MODE = true;
 
-    // Listen for auth state
+    // Check for redirect result first (returning from Google login)
+    const loginPending = localStorage.getItem('sopa_login_pending');
+    if (loginPending) {
+      show('s-login'); // show login while checking
+      document.getElementById('topbar').style.display = 'none';
+      document.getElementById('botNav').style.display = 'none';
+      auth.getRedirectResult().then(result => {
+        localStorage.removeItem('sopa_login_pending');
+        if (result && result.user) {
+          currentUser = result.user;
+          onUserLogin(result.user);
+        }
+      }).catch(e => {
+        localStorage.removeItem('sopa_login_pending');
+        console.error('Redirect result error:', e);
+        if (e.code !== 'auth/no-auth-event') {
+          toast('Erro no login: ' + e.message);
+        }
+      });
+    }
+
+    // Listen for auth state changes
     auth.onAuthStateChanged(user => {
       if (user) {
         currentUser = user;
         onUserLogin(user);
       } else {
-        show('s-login');
-        document.getElementById('topbar').style.display = 'none';
-        document.getElementById('botNav').style.display = 'none';
+        if (!localStorage.getItem('sopa_login_pending')) {
+          show('s-login');
+          document.getElementById('topbar').style.display = 'none';
+          document.getElementById('botNav').style.display = 'none';
+        }
       }
     });
 
@@ -477,18 +500,9 @@ function loginGoogle() {
   if (!auth) { toast('Configure o Firebase primeiro'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  auth.signInWithPopup(provider).catch(e => {
-    console.error('Login error:', e.code, e.message);
-    if (e.code === 'auth/popup-blocked') {
-      toast('Popup bloqueado — permita popups para este site');
-    } else if (e.code === 'auth/popup-closed-by-user') {
-      // User closed, do nothing
-    } else if (e.code === 'auth/cancelled-popup-request') {
-      // Another popup was opened, do nothing
-    } else {
-      toast('Erro: ' + e.message);
-    }
-  });
+  // Use redirect - works on all mobile browsers
+  localStorage.setItem('sopa_login_pending', '1');
+  auth.signInWithRedirect(provider);
 }
 
 function logout() {
