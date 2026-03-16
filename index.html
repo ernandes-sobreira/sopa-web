@@ -627,10 +627,12 @@ async function loadFromFirestore(uid) {
       const d = snap.data();
       // Load user's own data - overwrite defaults completely
       if (d.DATA) {
-        DATA.art = d.DATA.art || [];
-        DATA.proj = d.DATA.proj || [];
-        DATA.app = d.DATA.app || [];
-        DATA.pessoa = d.DATA.pessoa || [];
+        // Ensure all IDs are numbers after Firestore load
+        const fixIds = arr => (arr||[]).map(item => ({...item, id: Number(item.id)}));
+        DATA.art = fixIds(d.DATA.art);
+        DATA.proj = fixIds(d.DATA.proj);
+        DATA.app = fixIds(d.DATA.app);
+        DATA.pessoa = fixIds(d.DATA.pessoa);
       }
       if (d.DATA_AA !== undefined) DATA_AA = d.DATA_AA;
       if (d.WEEK !== undefined) WEEK = d.WEEK;
@@ -851,7 +853,7 @@ function delItem(id){if(!confirm('Excluir?'))return;DATA[cF]=DATA[cF].filter(i=>
 // ════════════ ARTICLE DETAIL ════════════
 function openArtDetail(id){cAI=id;cPS='info';setCC(FR.art.c);show('sad');renderArtDetail();}
 function renderArtDetail(){
-  const it=DATA.art.find(i=>i.id===cAI);if(!it)return;
+  const it=DATA.art.find(i=>i.id==cAI);if(!it)return;
   const tabs=[{k:'info',l:'ℹ️ Info'},{k:'notas',l:'📝 Notas'},{k:'arquivos',l:'📁 Arquivos'},{k:'autores',l:'👥 Autores'},{k:'datas',l:'🔔 Alertas'},{k:'progresso',l:'📊 Progresso'}];
   const tH=tabs.map(t=>`<div class="tab ${t.k===cPS?'on':''}" onclick="setPS('${t.k}')">${t.l}</div>`).join('');
   $('sad').innerHTML=`<div class="art-wrap">
@@ -897,7 +899,7 @@ const PROJ_MENU=[
 ];
 function openProjDetail(id){cPI=id;cPM='notas';setCC(FR.proj.c);show('spd');renderProjDetail();}
 function renderProjDetail(){
-  const it=DATA.proj.find(i=>i.id===cPI);if(!it)return;
+  const it=DATA.proj.find(i=>i.id==cPI);if(!it)return;
   const mH=PROJ_MENU.map(m=>`<div class="pm ${m.k===cPM?'on':''}" onclick="setPM('${m.k}')" title="${m.l}">${m.e}<span>${m.l}</span></div>`).join('');
   $('spd').innerHTML=`<div class="wr">
     <div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:12px">
@@ -1047,14 +1049,14 @@ function renderProgPanel(fk,it){
 }
 
 // ════════════ SHARED ACTIONS ════════════
-function sNA(id){const it=DATA.art.find(i=>i.id===id);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
-function sNP(id){const it=DATA.proj.find(i=>i.id===id);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
+function sNA(id){const it=DATA.art.find(i=>i.id==id);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
+function sNP(id){const it=DATA.proj.find(i=>i.id==id);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
 function sNG(){const it=(DATA[cGF]||[]).find(i=>i.id===cGI);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
 
 // FILE ACTIONS with real Firebase Storage
 async function hUp(ev,fk,id,rfn){
   const files=Array.from(ev.target.files);
-  const it=(DATA[fk]||[]).find(i=>i.id===id);
+  const it=(DATA[fk]||[]).find(i=>i.id==id);
   if(!it){toast('Item não encontrado');return;}
   
   for(const file of files){
@@ -1077,7 +1079,7 @@ async function hUp(ev,fk,id,rfn){
 }
 async function rmFile(fk,id,fi,rfn){
   if(!confirm('Excluir arquivo?'))return; // confirm is fine
-  const it=(DATA[fk]||[]).find(i=>i.id===id);
+  const it=(DATA[fk]||[]).find(i=>i.id==id);
   if(!it)return;
   const f=it.files[fi];
   if(f&&f.path) await deleteFileFromStorage(f.path);
@@ -1087,26 +1089,26 @@ async function rmFile(fk,id,fi,rfn){
   toast('Arquivo excluído');
 }
 function renFile(fk,id,fi,rfn){
-  const it=(DATA[fk]||[]).find(i=>i.id===id);
+  const it=(DATA[fk]||[]).find(i=>i.id==id);
   if(!it)return;
   const nn=prompt('Novo nome:',it.files[fi].name);
   if(nn){it.files[fi].name=nn;scheduleSync();window[rfn]&&window[rfn]();}
 }
 
-function addTeam(fk,id,rfn){const m=$('nMm').value.trim();if(!m)return;const it=(DATA[fk]||[]).find(i=>i.id===id);it.team.push(m);scheduleSync();window[rfn]&&window[rfn]();toast('Adicionado');}
-function delTeam(fk,id,ti,rfn){const it=(DATA[fk]||[]).find(i=>i.id===id);it.team.splice(ti,1);scheduleSync();window[rfn]&&window[rfn]();}
-function addDate(fk,id,rfn){const l=$('dL0').value.trim(),v=$('dV0').value;if(!l||!v)return;const it=(DATA[fk]||[]).find(i=>i.id===id);it.dates.push({l,v,s:dSt(v)});scheduleSync();window[rfn]&&window[rfn]();toast('Alerta adicionado');}
-function delDate(fk,id,di,rfn){const it=(DATA[fk]||[]).find(i=>i.id===id);it.dates.splice(di,1);scheduleSync();window[rfn]&&window[rfn]();}
-function updProg(fk,id,v){const it=(DATA[fk]||[]).find(i=>i.id===id);if(it)it.pct=parseInt(v);const n=document.querySelector('.pgn');const f=$('pgF');if(n)n.textContent=v+'%';if(f)f.style.width=v+'%';scheduleSync();}
-function updStat(fk,id,v){const it=(DATA[fk]||[]).find(i=>i.id===id);if(it)it.status=v;scheduleSync();toast('Status atualizado');}
-function updM(id,mi,v){const it=DATA.proj.find(i=>i.id===id);if(!it||!it.metas)return;it.metas[mi].pct=parseInt(v);const pf=document.querySelectorAll('.mpf')[mi];const pp=document.querySelectorAll('.mpc')[mi];if(pf)pf.style.width=v+'%';if(pp)pp.textContent=v+'%';scheduleSync();}
-function delM(id,mi){DATA.proj.find(i=>i.id===id).metas.splice(mi,1);renderProjDetail();scheduleSync();}
-function delO(id,oi){DATA.proj.find(i=>i.id===id).orcamento.splice(oi,1);renderProjDetail();scheduleSync();}
-function delPr(id,pi){DATA.proj.find(i=>i.id===id).produtos.splice(pi,1);renderProjDetail();scheduleSync();}
-function delCo(id,ci){DATA.proj.find(i=>i.id===id).coletas.splice(ci,1);renderProjDetail();scheduleSync();}
-function delAl(id,ai){DATA.proj.find(i=>i.id===id).alunos.splice(ai,1);renderProjDetail();scheduleSync();}
-function delBc(id,bi){DATA.proj.find(i=>i.id===id).bancas.splice(bi,1);renderProjDetail();scheduleSync();}
-function delRl(id,ri){DATA.proj.find(i=>i.id===id).relatorios.splice(ri,1);renderProjDetail();scheduleSync();}
+function addTeam(fk,id,rfn){const m=$('nMm').value.trim();if(!m)return;const it=(DATA[fk]||[]).find(i=>i.id==id);it.team.push(m);scheduleSync();window[rfn]&&window[rfn]();toast('Adicionado');}
+function delTeam(fk,id,ti,rfn){const it=(DATA[fk]||[]).find(i=>i.id==id);it.team.splice(ti,1);scheduleSync();window[rfn]&&window[rfn]();}
+function addDate(fk,id,rfn){const l=$('dL0').value.trim(),v=$('dV0').value;if(!l||!v)return;const it=(DATA[fk]||[]).find(i=>i.id==id);it.dates.push({l,v,s:dSt(v)});scheduleSync();window[rfn]&&window[rfn]();toast('Alerta adicionado');}
+function delDate(fk,id,di,rfn){const it=(DATA[fk]||[]).find(i=>i.id==id);it.dates.splice(di,1);scheduleSync();window[rfn]&&window[rfn]();}
+function updProg(fk,id,v){const it=(DATA[fk]||[]).find(i=>i.id==id);if(it)it.pct=parseInt(v);const n=document.querySelector('.pgn');const f=$('pgF');if(n)n.textContent=v+'%';if(f)f.style.width=v+'%';scheduleSync();}
+function updStat(fk,id,v){const it=(DATA[fk]||[]).find(i=>i.id==id);if(it)it.status=v;scheduleSync();toast('Status atualizado');}
+function updM(id,mi,v){const it=DATA.proj.find(i=>i.id==id);if(!it||!it.metas)return;it.metas[mi].pct=parseInt(v);const pf=document.querySelectorAll('.mpf')[mi];const pp=document.querySelectorAll('.mpc')[mi];if(pf)pf.style.width=v+'%';if(pp)pp.textContent=v+'%';scheduleSync();}
+function delM(id,mi){DATA.proj.find(i=>i.id==id).metas.splice(mi,1);renderProjDetail();scheduleSync();}
+function delO(id,oi){DATA.proj.find(i=>i.id==id).orcamento.splice(oi,1);renderProjDetail();scheduleSync();}
+function delPr(id,pi){DATA.proj.find(i=>i.id==id).produtos.splice(pi,1);renderProjDetail();scheduleSync();}
+function delCo(id,ci){DATA.proj.find(i=>i.id==id).coletas.splice(ci,1);renderProjDetail();scheduleSync();}
+function delAl(id,ai){DATA.proj.find(i=>i.id==id).alunos.splice(ai,1);renderProjDetail();scheduleSync();}
+function delBc(id,bi){DATA.proj.find(i=>i.id==id).bancas.splice(bi,1);renderProjDetail();scheduleSync();}
+function delRl(id,ri){DATA.proj.find(i=>i.id==id).relatorios.splice(ri,1);renderProjDetail();scheduleSync();}
 
 // ════════════ AA ════════════
 
@@ -1211,9 +1213,9 @@ function renderAA(){
 function setAACat(c){cAACat=c;renderAA();}
 function delAA(id){if(!confirm('Excluir?'))return;DATA_AA=DATA_AA.filter(i=>i.id!==id);renderAA();scheduleSync();toast('Excluído');}
 function editAA(id){openModal('aa',id,null);}
-function markAA(id,s){const it=DATA_AA.find(i=>i.id===id);if(it)it.status=s;renderAA();scheduleSync();toast(s==='realizado'?'✓ Realizado!':'Desmarcado');}
+function markAA(id,s){const it=DATA_AA.find(i=>i.id==id);if(it)it.status=s;renderAA();scheduleSync();toast(s==='realizado'?'✓ Realizado!':'Desmarcado');}
 async function hUpAA(ev,id){
-  const it=DATA_AA.find(i=>i.id===id);
+  const it=DATA_AA.find(i=>i.id==id);
   if(!it.files)it.files=[];
   for(const file of Array.from(ev.target.files)){
     await new Promise((resolve)=>{
@@ -1229,7 +1231,7 @@ async function hUpAA(ev,id){
 }
 async function rmAAFile(id,fi){
   if(!confirm('Excluir arquivo?'))return;
-  const it=DATA_AA.find(i=>i.id===id);
+  const it=DATA_AA.find(i=>i.id==id);
   const f=it.files[fi];
   if(f&&f.path)await deleteFileFromStorage(f.path);
   it.files.splice(fi,1);scheduleSync();renderAA();toast('Removido');
@@ -1415,7 +1417,7 @@ function openModal(ctx,id,fk){
   if(ctx==='weekadd'){$('mTi').textContent='Nova meta da semana';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Meta</label><input class="fi" id="wT" placeholder="Meta a fechar esta semana...">`;$('ov').classList.add('op');return;}
   if(ctx==='aa'){
     const cc2='#00897B';$('mSv').style.background=cc2;$('mTi').style.color=cc2;
-    const it=id?DATA_AA.find(i=>i.id===id):null;
+    const it=id?DATA_AA.find(i=>i.id==id):null;
     $('mTi').textContent=id?'Editar atividade':'Nova atividade — AA';
     $('mBd').innerHTML=`<label class="fl">Descrição *</label><input class="fi" id="bN" value="${it?it.name:''}" placeholder="Ex: Parecer artigo Hydrobiologia">
       <div class="fg2">
@@ -1442,7 +1444,7 @@ function openModal(ctx,id,fk){
   if(ctx==='banca'){$('mTi').textContent='Nova banca';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Tipo</label><select class="fi" id="bTi"><option>Qualificação</option><option>Defesa</option><option>Defesa Cotutela</option><option>TCC</option></select><label class="fl">Aluno</label><input class="fi" id="bAl"><label class="fl">Título</label><textarea class="fi" id="bTt" rows="2"></textarea><div class="fg2"><div><label class="fl">Data</label><input class="fi" id="bDt" type="date"></div><div><label class="fl">Status</label><select class="fi" id="bSt"><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="prevista">Prevista</option></select></div></div>`;$('ov').classList.add('op');return;}
   if(ctx==='relatorio'){$('mTi').textContent='Novo relatório';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Nome</label><input class="fi" id="rN"><label class="fl">Data</label><input class="fi" id="rD" type="date"><label class="fl">Status</label><select class="fi" id="rSt"><option value="pendente">Pendente</option><option value="entregue">Entregue</option><option value="aprovado">Aprovado</option></select><label class="fl">Obs.</label><input class="fi" id="rO">`;$('ov').classList.add('op');return;}
   if(ctx==='artinfo'){$('mTi').textContent='Info do artigo';$('mTi').style.color=c;
-    const it=DATA.art.find(i=>i.id===id);
+    const it=DATA.art.find(i=>i.id==id);
     $('mBd').innerHTML=`<label class="fl">DOI</label><input class="fi" id="aiDoi" value="${it&&it.doi?it.doi:''}" placeholder="10.xxxx/..."><label class="fl">Fator de Impacto</label><input class="fi" id="aiIf" value="${it&&it.impact?it.impact:''}" placeholder="4.2"><label class="fl">Palavras-chave</label><input class="fi" id="aiKw" value="${it&&it.keywords?it.keywords:''}" placeholder="palavra1; palavra2"><label class="fl">Abstract</label><textarea class="fi" id="aiAbs" rows="4">${it&&it.abstract?it.abstract:''}</textarea>`;
     $('ov').classList.add('op');return;}
   // new / edit
@@ -1462,7 +1464,7 @@ function doSave(){
     const nm=$('bN').value.trim();if(!nm)return;
     const links=[];const ll=$('bLL').value.trim(),lu=$('bLU').value.trim();if(ll&&lu)links.push({l:ll,u:lu});
     const obj={name:nm,cat:$('bC').value,status:$('bS').value,urgency:$('bU').value,data:$('bD').value,obs:$('bO').value,links,files:[]};
-    if(eId){const idx=DATA_AA.findIndex(i=>i.id===eId);if(idx!==-1)DATA_AA[idx]={...DATA_AA[idx],...obj};toast('Atualizado ✓');}
+    if(eId){const idx=DATA_AA.findIndex(i=>i.id==eId);if(idx!==-1)DATA_AA[idx]={...DATA_AA[idx],...obj};toast('Atualizado ✓');}
     else{obj.id=nAAId++;DATA_AA.push(obj);toast('Atividade adicionada ✓');}
     closeModal();renderAA();scheduleSync();return;
   }
@@ -1477,7 +1479,7 @@ function doSave(){
   const name=$('fN').value.trim();if(!name){$('fN').focus();return;}
   const obj={name,cat:$('fCa').value,status:$('fSt').value,urgency:$('fUr').value,pct:parseInt($('fP').value),notes:'',files:[],team:[],dates:[],metas:[],orcamento:[],produtos:[],coletas:[],alunos:[],bancas:[],relatorios:[],abstract:'',keywords:'',doi:'',impact:''};
   (f?f.ex:[]).forEach(e=>{const el=document.getElementById('ef_'+e.k);if(el)obj[e.k]=el.value||'';});
-  if(eId){const idx=(DATA[cF]||[]).findIndex(i=>i.id===eId);if(idx!==-1)DATA[cF][idx]={...DATA[cF][idx],...obj};toast('Atualizado ✓');}
+  if(eId){const idx=(DATA[cF]||[]).findIndex(i=>i.id==eId);if(idx!==-1)DATA[cF][idx]={...DATA[cF][idx],...obj};toast('Atualizado ✓');}
   else{obj.id=nId++;if(!DATA[cF])DATA[cF]=[];DATA[cF].push(obj);toast('Adicionado ✓');}
   closeModal();scheduleSync();
   if(cF==='art'&&eId)renderArtDetail();else if(cF==='proj'&&eId)renderProjDetail();else renderList();
