@@ -454,17 +454,6 @@ function initFirebase(config) {
     storage = firebase.storage();
     FIREBASE_MODE = true;
 
-    // Handle redirect result first (for mobile browsers)
-    auth.getRedirectResult().then(result => {
-      if (result && result.user) {
-        // Redirect login successful - onAuthStateChanged will handle it
-      }
-    }).catch(e => {
-      if (e.code !== 'auth/no-auth-event') {
-        console.warn('Redirect result error:', e.message);
-      }
-    });
-
     // Listen for auth state
     auth.onAuthStateChanged(user => {
       if (user) {
@@ -488,14 +477,16 @@ function loginGoogle() {
   if (!auth) { toast('Configure o Firebase primeiro'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  // Try popup first, fall back to redirect
   auth.signInWithPopup(provider).catch(e => {
-    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-      // Fallback to redirect
-      auth.signInWithRedirect(provider);
+    console.error('Login error:', e.code, e.message);
+    if (e.code === 'auth/popup-blocked') {
+      toast('Popup bloqueado — permita popups para este site');
+    } else if (e.code === 'auth/popup-closed-by-user') {
+      // User closed, do nothing
+    } else if (e.code === 'auth/cancelled-popup-request') {
+      // Another popup was opened, do nothing
     } else {
-      toast('Erro no login: ' + e.message);
-      console.error(e);
+      toast('Erro: ' + e.message);
     }
   });
 }
