@@ -649,9 +649,11 @@ async function saveToFirestore() {
 // STORAGE — UPLOAD REAL
 // ════════════════════════════════════════════
 async function uploadFileToStorage(file, fk, itemId, onDone) {
+  // Helper inline to avoid scope issues
+  function _sz(b){return b>1e6?(b/1e6).toFixed(1)+' MB':b>1e3?(b/1e3).toFixed(0)+' KB':b+' B';}
+  
   if (!FIREBASE_MODE || !currentUser) {
-    // Demo mode: store as fake entry
-    onDone({ name: file.name, size: fmtSz(file.size), url: null, demo: true });
+    onDone({ name: file.name, size: _sz(file.size), url: null, demo: true });
     return;
   }
 
@@ -675,17 +677,17 @@ async function uploadFileToStorage(file, fk, itemId, onDone) {
       ov.classList.remove('show');
       toast('Erro no upload: ' + err.message);
       console.error('Upload error:', err);
-      onDone({ name: file.name, size: fmtSz(file.size), url: null, error: true });
+      onDone({ name: file.name, size: _sz(file.size), url: null, error: true });
     },
     async () => {
       try {
         const url = await uploadTask.snapshot.ref.getDownloadURL();
         ov.classList.remove('show');
-        onDone({ name: file.name, size: fmtSz(file.size), url, path });
+        onDone({ name: file.name, size: _sz(file.size), url, path });
       } catch(e) {
         ov.classList.remove('show');
         toast('Erro ao obter URL: ' + e.message);
-        onDone({ name: file.name, size: fmtSz(file.size), url: null, path });
+        onDone({ name: file.name, size: _sz(file.size), url: null, path });
       }
     }
   );
