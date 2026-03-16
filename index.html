@@ -500,9 +500,30 @@ function loginGoogle() {
   if (!auth) { toast('Configure o Firebase primeiro'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  // Use redirect - works on all mobile browsers
-  localStorage.setItem('sopa_login_pending', '1');
-  auth.signInWithRedirect(provider);
+  
+  // Detect mobile vs desktop
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    // Mobile: use redirect (popup blocked by Android browsers)
+    localStorage.setItem('sopa_login_pending', '1');
+    auth.signInWithRedirect(provider);
+  } else {
+    // Desktop: use popup (faster, stays on page)
+    auth.signInWithPopup(provider).then(result => {
+      currentUser = result.user;
+      onUserLogin(result.user);
+    }).catch(e => {
+      console.error('Popup login error:', e.code, e.message);
+      if (e.code === 'auth/popup-blocked') {
+        // Fallback to redirect if popup blocked on desktop too
+        localStorage.setItem('sopa_login_pending', '1');
+        auth.signInWithRedirect(provider);
+      } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+        toast('Erro no login: ' + e.message);
+      }
+    });
+  }
 }
 
 function logout() {
