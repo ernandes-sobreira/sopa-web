@@ -680,8 +680,14 @@ async function uploadFileToStorage(file, fk, itemId, onDone) {
     },
     err => {
       ov.classList.remove('show');
-      toast('Erro no upload: ' + err.message);
-      console.error('Upload error:', err);
+      console.error('Upload error:', err.code, err.message);
+      if (err.code === 'storage/unauthorized') {
+        toast('Erro: sem permissão. Verifique as regras do Storage.');
+      } else if (err.code === 'storage/unauthenticated') {
+        toast('Erro: não autenticado. Faça login novamente.');
+      } else {
+        toast('Erro no upload: ' + err.message);
+      }
       onDone({ name: file.name, size: _sz(file.size), url: null, error: true });
     },
     async () => {
@@ -982,7 +988,7 @@ function renderFilesPanel(fk,it,rfn){
       <div class="fsz">${x.size}${x.demo?' · local demo':x.url?' · ☁️ nuvem':''}</div>
     </div>
     <div style="display:flex;gap:3px">
-      ${x.url?`<button class="ac" onclick="window.open('${x.url}','_blank')" title="Download">⬇️</button>`:`<button class="ac" onclick="toast('${FIREBASE_MODE?'URL não disponível':'Firebase necessário para download'}')" title="Download">⬇️</button>`}
+      ${x.url?`<button class="ac" onclick="dlFile('${x.url}','${x.name}')" title="Download">⬇️</button>`:`<button class="ac" onclick="toast('Faça login para download')" title="Download">⬇️</button>`}
       <button class="ac" onclick="renFile('${fk}',${it.id},${fi},'${rfn}')" title="Renomear">✏️</button>
       <button class="ac dl" onclick="rmFile('${fk}',${it.id},${fi},'${rfn}')" title="Excluir">🗑️</button>
     </div></div>`).join('');
@@ -1049,7 +1055,7 @@ async function hUp(ev,fk,id,rfn){
   else if(window[rfn]) window[rfn]();
 }
 async function rmFile(fk,id,fi,rfn){
-  if(!confirm('Excluir arquivo?'))return;
+  if(!confirm('Excluir arquivo?'))return; // confirm is fine
   const it=(DATA[fk]||[]).find(i=>i.id===id);
   if(!it)return;
   const f=it.files[fi];
@@ -1122,6 +1128,28 @@ function loadDemoData() {
     {t:'Submeter artigo PM2.5',d:false},
     {t:'Entregar Produto 4 UNESCO',d:false},
   ];
+}
+
+
+function dlFile(url, name) {
+  if (!url) { toast('URL não disponível'); return; }
+  toast('Preparando download...');
+  fetch(url)
+    .then(r => r.blob())
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name || 'arquivo';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      toast('Download iniciado ✓');
+    })
+    .catch(e => {
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    });
 }
 
 function openAA(){setCC('#00897B');show('saa');renderAA();}
@@ -1397,7 +1425,7 @@ const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCSTBNmzHJE-vIw6jEjlOVE_9femj5n3k8",
   authDomain: "sopa-fd8b8.firebaseapp.com",
   projectId: "sopa-fd8b8",
-  storageBucket: "sopa-fd8b8.appspot.com",
+  storageBucket: "sopa-fd8b8.firebasestorage.app",
   messagingSenderId: "962393498465",
   appId: "1:962393498465:web:fc2023af290ce9b6a31b20"
 };
