@@ -674,11 +674,19 @@ async function uploadFileToStorage(file, fk, itemId, onDone) {
     err => {
       ov.classList.remove('show');
       toast('Erro no upload: ' + err.message);
+      console.error('Upload error:', err);
+      onDone({ name: file.name, size: fmtSz(file.size), url: null, error: true });
     },
     async () => {
-      const url = await uploadTask.snapshot.ref.getDownloadURL();
-      ov.classList.remove('show');
-      onDone({ name: file.name, size: fmtSz(file.size), url, path });
+      try {
+        const url = await uploadTask.snapshot.ref.getDownloadURL();
+        ov.classList.remove('show');
+        onDone({ name: file.name, size: fmtSz(file.size), url, path });
+      } catch(e) {
+        ov.classList.remove('show');
+        toast('Erro ao obter URL: ' + e.message);
+        onDone({ name: file.name, size: fmtSz(file.size), url: null, path });
+      }
     }
   );
 }
@@ -1014,14 +1022,24 @@ async function hUp(ev,fk,id,rfn){
   const files=Array.from(ev.target.files);
   const it=(DATA[fk]||[]).find(i=>i.id===id);
   if(!it){toast('Item não encontrado');return;}
+  
   for(const file of files){
-    await uploadFileToStorage(file, fk, id, (fileObj)=>{
-      it.files.push(fileObj);
-      scheduleSync();
+    await new Promise((resolve)=>{
+      uploadFileToStorage(file, fk, id, (fileObj)=>{
+        if(!it.files) it.files=[];
+        it.files.push(fileObj);
+        scheduleSync();
+        resolve();
+      });
     });
   }
-  toast(files.length+' arquivo(s) adicionado(s)');
-  window[rfn]&&window[rfn]();
+  
+  toast(files.length+' arquivo(s) salvo(s) na nuvem ✓');
+  // Force refresh the current screen
+  if(rfn==='renderArtDetail') renderArtDetail();
+  else if(rfn==='renderProjDetail') renderProjDetail();
+  else if(rfn==='renderGenDetail') renderGenDetail();
+  else if(window[rfn]) window[rfn]();
 }
 async function rmFile(fk,id,fi,rfn){
   if(!confirm('Excluir arquivo?'))return;
@@ -1142,9 +1160,16 @@ async function hUpAA(ev,id){
   const it=DATA_AA.find(i=>i.id===id);
   if(!it.files)it.files=[];
   for(const file of Array.from(ev.target.files)){
-    await uploadFileToStorage(file,'aa',id,(f)=>{it.files.push(f);scheduleSync();});
+    await new Promise((resolve)=>{
+      uploadFileToStorage(file,'aa',id,(f)=>{
+        it.files.push(f);
+        scheduleSync();
+        resolve();
+      });
+    });
   }
-  renderAA();toast('Adicionado');
+  renderAA();
+  toast('Arquivo(s) salvo(s) na nuvem ✓');
 }
 async function rmAAFile(id,fi){
   if(!confirm('Excluir arquivo?'))return;
