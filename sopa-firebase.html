@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>SOPA — Sistema Operacional Pessoal e Acadêmico</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script>
+// Garante que Firebase carregou antes de inicializar
+window._firebaseReady = typeof firebase !== 'undefined';
+</script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --art:#E53935;--proj:#1E88E5;--app:#43A047;--ag:#8E24AA;--pe:#FB8C00;--aa:#00897B;
+  --bg:#F4F6FB;--w:#fff;--tx:#1C1C2E;--mu:#9095A8;--bd:#E8EAF2;
+  --rr:18px;--ff:'Outfit',sans-serif;--fm:'JetBrains Mono',monospace;--cc:#8E24AA;
+}
+body{background:var(--bg);font-family:var(--ff);color:var(--tx);min-height:100vh;overflow-x:hidden;}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:90;background:var(--w);border-bottom:1.5px solid var(--bd);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.logo{font-weight:900;font-size:1.3rem;letter-spacing:.1em;}
+.logo b{background:linear-gradient(135deg,#E53935,#1E88E5,#43A047,#00897B,#8E24AA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.dpill{font-family:var(--fm);font-size:.6rem;color:var(--mu);background:var(--bg);border:1.5px solid var(--bd);padding:4px 10px;border-radius:20px;}
+.user-av{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid var(--bd);object-fit:cover;font-size:1.2rem;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#43A047;flex-shrink:0;}
+.sync-dot.syncing{animation:spin .8s linear infinite;background:transparent;border:2px solid var(--app);border-top-color:transparent;}
+.sync-dot.offline{background:#FB8C00;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SCREENS */
+.sc{display:none;animation:fi .2s ease;}.sc.on{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
+@keyframes su{from{transform:translateY(37px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeScale{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+
+.wr{padding:14px 14px 90px;max-width:720px;margin:0 auto;}
+
+/* CONFIG / LOGIN SCREENS */
+.auth-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#8E24AA 0%,#1E88E5 100%);}
+.auth-card{background:var(--w);border-radius:24px;padding:32px 28px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:fadeScale .3s ease;}
+.auth-logo{font-size:2rem;font-weight:900;letter-spacing:.12em;text-align:center;margin-bottom:6px;}
+.auth-logo b{background:linear-gradient(135deg,#E53935,#1E88E5,#43A047,#00897B,#8E24AA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-sub{text-align:center;font-size:.78rem;color:var(--mu);margin-bottom:28px;font-weight:500;}
+.auth-btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:var(--w);border:2px solid var(--bd);border-radius:12px;padding:14px;font-family:var(--ff);font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;color:var(--tx);}
+.auth-btn-google:hover{border-color:#4285F4;box-shadow:0 4px 16px rgba(66,133,244,.2);}
+.google-icon{width:20px;height:20px;flex-shrink:0;}
+.auth-divider{text-align:center;font-size:.7rem;color:var(--mu);margin:20px 0;position:relative;}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--bd);}
+.auth-divider::before{left:0;}.auth-divider::after{right:0;}
+
+/* CONFIG FIREBASE */
+.cfg-step{background:var(--bg);border:1.5px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px;}
+.cfg-num{width:24px;height:24px;border-radius:50%;background:var(--cc);color:#fff;font-size:.72rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0;}
+.cfg-title{font-size:.85rem;font-weight:800;display:flex;align-items:center;margin-bottom:8px;}
+.cfg-body{font-size:.75rem;color:var(--mu);line-height:1.6;}
+.cfg-code{background:#1C1C2E;color:#4ade80;font-family:var(--fm);font-size:.68rem;padding:10px 12px;border-radius:8px;margin:8px 0;white-space:pre-wrap;word-break:break-all;}
+
+/* HOME */
+.mcard{background:linear-gradient(135deg,#8E24AA,#E53935);border-radius:var(--rr);padding:18px;margin-bottom:12px;color:#fff;position:relative;overflow:hidden;}
+.mcard::before{content:'';position:absolute;right:-14px;top:-14px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.08);}
+.mll{font-size:.58rem;font-weight:800;letter-spacing:.14em;opacity:.7;margin-bottom:5px;text-transform:uppercase;}
+.mtt{font-size:.9rem;font-weight:700;line-height:1.45;}.maa{font-size:.68rem;opacity:.6;margin-top:5px;font-style:italic;}
+.wcrd{background:var(--w);border:1.5px solid var(--bd);border-radius:var(--rr);padding:14px 14px 8px;margin-bottom:12px;}
+.slb{font-size:.58rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.pls{width:7px;height:7px;border-radius:50%;background:#FB8C00;animation:pls 2s infinite;flex-shrink:0;}
+.wr0{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--bd);}.wr0:last-child{border-bottom:none;}
+.wck{width:21px;height:21px;border-radius:6px;border:2px solid var(--bd);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.68rem;color:#fff;transition:all .2s;}.wck.on{background:#43A047;border-color:#43A047;}
+.wtx{font-size:.79rem;font-weight:600;flex:1;line-height:1.3;}.wtx.dn{text-decoration:line-through;color:var(--mu);font-weight:400;}
+.wad{font-size:.72rem;color:var(--mu);cursor:pointer;padding:3px 7px;border-radius:7px;}.wad:hover{background:var(--bd);}
+.igr{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:12px;}
+.ib{background:var(--w);border:2px solid var(--bd);border-radius:17px;padding:15px 3px 11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;}
+.ib::after{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--c);border-radius:17px 17px 0 0;}
+.ib:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.11);border-color:var(--c);}
+.ib:active{transform:scale(.92);}
+.ib .em{font-size:1.85rem;line-height:1;}.ib .il{font-size:.52rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--c);}
+.ib .ic{position:absolute;top:6px;right:6px;background:var(--c);color:#fff;font-size:.5rem;font-family:var(--fm);padding:2px 5px;border-radius:9px;}
+.sr{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+.sm{background:var(--w);border:1.5px solid var(--bd);border-radius:12px;padding:12px 8px;text-align:center;}
+.sn{font-size:1.45rem;font-weight:900;}.sl{font-size:.57rem;color:var(--mu);font-weight:600;margin-top:2px;}
+
+/* LIST */
+.fhd{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
+.bk{width:39px;height:39px;border-radius:12px;border:1.5px solid var(--bd);background:var(--w);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s;}.bk:hover{border-color:var(--cc);}
+.ftt{font-size:1.1rem;font-weight:900;color:var(--cc);}.fsb{font-size:.67rem;color:var(--mu);font-weight:500;}
+.cpl{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;margin-bottom:12px;scrollbar-width:none;}.cpl::-webkit-scrollbar{display:none;}
+.cp{background:var(--w);border:1.5px solid var(--bd);border-radius:30px;padding:5px 13px;font-size:.71rem;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--mu);transition:all .15s;}.cp.on{background:var(--cc);border-color:var(--cc);color:#fff;}
+.il0{display:flex;flex-direction:column;gap:8px;}
+.ic0{background:var(--w);border:1.5px solid var(--bd);border-left:5px solid var(--cc);border-radius:12px;padding:11px 12px;cursor:pointer;transition:box-shadow .2s,transform .15s;animation:fi .2s both;}
+.ic0:hover{box-shadow:0 4px 15px rgba(0,0,0,.08);transform:translateY(-1px);}
+.it0{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px;}
+.in0{font-size:.84rem;font-weight:700;flex:1;line-height:1.3;}
+.ia0{display:flex;gap:3px;flex-shrink:0;}
+.ac{width:26px;height:26px;border-radius:7px;border:none;background:var(--bg);cursor:pointer;font-size:.72rem;transition:background .15s;}.ac:hover{background:var(--bd);}.ac.dl:hover{background:#ffebee;}
+.im{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px;}
+.mt{font-size:.57rem;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--bg);color:var(--mu);}
+.st{font-size:.57rem;font-weight:800;padding:2px 7px;border-radius:5px;}
+.s-plan{background:#f3e5f5;color:#6a1b9a;}.s-and{background:#e8eaf6;color:#283593;}
+.s-rev{background:#fff8e1;color:#e65100;}.s-pub{background:#e0f7fa;color:#00695c;}
+.s-cam{background:#fff3e0;color:#bf360c;}.s-dev{background:#fce4ec;color:#880e4f;}
+.s-esc{background:#e3f2fd;color:#1565c0;}.s-sub{background:#e8f5e9;color:#2e7d32;}
+.s-con{background:#e8f5e9;color:#1b5e20;}.s-ace{background:#f1f8e9;color:#33691e;}
+.ug{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;flex-shrink:0;}
+.ua{background:#E53935;}.um{background:#FB8C00;}.ub{background:#43A047;}
+.pr{display:flex;align-items:center;gap:7px;}
+.pb{flex:1;height:5px;background:var(--bg);border-radius:5px;overflow:hidden;border:1px solid var(--bd);}
+.pf{height:100%;border-radius:5px;background:var(--cc);transition:width .6s;}
+.pp{font-family:var(--fm);font-size:.58rem;color:var(--mu);min-width:24px;text-align:right;}
+.ar{display:flex;align-items:center;gap:8px;background:var(--w);border:2px dashed var(--bd);border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--mu);font-size:.79rem;font-weight:700;margin-top:5px;transition:border-color .2s,color .2s;}.ar:hover{border-color:var(--cc);color:var(--cc);}
+
+/* TABS */
+.tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;margin-bottom:14px;scrollbar-width:none;}.tabs::-webkit-scrollbar{display:none;}
+.tab{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:7px 14px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--mu);transition:all .15s;flex-shrink:0;}.tab.on{background:var(--cc);border-color:var(--cc);color:#fff;}
+
+/* ARTICLE HERO */
+.art-wrap{padding:14px 14px 90px;max-width:720px;margin:0 auto;}
+.art-hero{background:var(--w);border:1.5px solid var(--bd);border-radius:var(--rr);padding:18px;margin-bottom:12px;}
+.art-title{font-size:1rem;font-weight:900;line-height:1.35;color:var(--cc);margin-bottom:8px;}
+.art-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.art-prow{display:flex;align-items:center;gap:8px;}
+.art-pbar{flex:1;height:8px;background:var(--bg);border-radius:8px;overflow:hidden;border:1px solid var(--bd);}
+.art-pfill{height:100%;border-radius:8px;background:var(--cc);transition:width .6s;}
+
+/* PROJ MENU */
+.proj-layout{display:flex;gap:12px;align-items:flex-start;}
+.proj-menu{display:flex;flex-direction:column;gap:4px;min-width:44px;flex-shrink:0;}
+.pm{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--bd);background:var(--w);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:1.15rem;transition:all .15s;flex-shrink:0;}
+.pm span{font-size:.43rem;font-weight:800;color:var(--mu);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;}
+.pm.on{background:var(--cc);border-color:var(--cc);}.pm.on span{color:rgba(255,255,255,.75);}
+.proj-content{flex:1;min-width:0;}
+
+/* SHARED */
+.card{background:var(--w);border:1.5px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:9px;}
+.fl{font-size:.63rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:11px;display:block;}.fl:first-child{margin-top:0;}
+.fi{width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:9px;font-family:var(--ff);font-size:.82rem;font-weight:600;color:var(--tx);background:var(--bg);outline:none;margin-top:6px;transition:border-color .2s;}.fi:focus{border-color:var(--cc);background:var(--w);}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sb{margin-top:8px;background:var(--cc);border:none;border-radius:9px;color:#fff;font-family:var(--ff);font-size:.78rem;font-weight:700;padding:8px 18px;cursor:pointer;transition:opacity .15s;}.sb:hover{opacity:.85;}
+.na{width:100%;min-height:120px;border:1.5px solid var(--bd);border-radius:10px;padding:11px;font-family:var(--ff);font-size:.82rem;color:var(--tx);background:var(--w);resize:vertical;outline:none;line-height:1.6;margin-top:6px;}.na:focus{border-color:var(--cc);}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:6px;background:var(--bd);outline:none;margin:7px 0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:19px;height:19px;border-radius:50%;background:var(--cc);cursor:pointer;box-shadow:0 2px 7px rgba(0,0,0,.2);}
+
+/* FILES */
+.fl0{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.fi0{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px;}
+.fic{font-size:1.2rem;flex-shrink:0;}.fna{font-size:.79rem;font-weight:700;flex:1;}.fsz{font-size:.61rem;color:var(--mu);font-family:var(--fm);}
+.fup-prog{width:100%;height:4px;background:var(--bd);border-radius:4px;margin-top:4px;overflow:hidden;}
+.fup-fill{height:100%;background:var(--cc);border-radius:4px;transition:width .3s;}
+.uz{border:2px dashed var(--bd);border-radius:10px;padding:18px;text-align:center;color:var(--mu);cursor:pointer;position:relative;transition:border-color .2s;}.uz:hover{border-color:var(--cc);}.uz input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
+
+/* TEAM */
+.tl{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.ti{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:9px;}
+.ta{width:33px;height:33px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;flex-shrink:0;}
+.tn{font-size:.82rem;font-weight:700;flex:1;}.tr{font-size:.61rem;color:var(--mu);}
+
+/* DATES */
+.dl{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.di{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:9px;}
+.dif{flex:1;}.dlb{font-size:.79rem;font-weight:700;}.dva{font-size:.67rem;color:var(--mu);font-family:var(--fm);}
+.db{font-size:.55rem;font-weight:800;padding:2px 7px;border-radius:5px;}
+.dok{background:#e8f5e9;color:#2e7d32;}.dwa{background:#fff8e1;color:#e65100;}.dov{background:#ffebee;color:#c62828;}
+
+/* PROGRESS */
+.pgd{background:var(--w);border:1.5px solid var(--bd);border-radius:12px;padding:14px;}
+.pgb{text-align:center;margin-bottom:10px;}
+.pgn{font-size:2.5rem;font-weight:900;color:var(--cc);}
+.pgbr{height:10px;background:var(--bg);border-radius:10px;overflow:hidden;border:1px solid var(--bd);margin:7px 0;}
+.pgfr{height:100%;border-radius:10px;background:var(--cc);transition:width .8s ease;}
+
+/* METAS */
+.ml0{display:flex;flex-direction:column;gap:7px;margin-bottom:8px;}
+.mi{background:var(--bg);border-radius:9px;padding:9px 11px;}
+.mn{font-size:.77rem;font-weight:700;margin-bottom:5px;}
+.mpr{display:flex;align-items:center;gap:7px;}
+.mpb{flex:1;height:4px;background:var(--bd);border-radius:4px;overflow:hidden;}
+.mpf{height:100%;border-radius:4px;background:var(--cc);}
+.mpc{font-family:var(--fm);font-size:.57rem;color:var(--mu);min-width:22px;text-align:right;}
+
+/* BUDGET */
+.bsm{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;}
+.bsc{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:10px;text-align:center;}
+.bsn{font-size:.95rem;font-weight:900;}.bsl{font-size:.57rem;color:var(--mu);font-weight:600;}
+.bl0{display:flex;flex-direction:column;gap:5px;}
+.bi{background:var(--w);border:1.5px solid var(--bd);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:8px;}
+.bin{flex:1;}.bna{font-size:.79rem;font-weight:700;}.bca{font-size:.61rem;color:var(--mu);}
+.bva{font-family:var(--fm);font-size:.79rem;font-weight:700;}
+.be{color:#2e7d32;}.bs{color:#c62828;}
+
+/* PRODUCTS / COLETAS */
+.pl0{display:flex;flex-direction:column;gap:6px;}
+.pi{background:var(--w);border:1.5px solid var(--bd);border-left:4px solid var(--cc);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;}
+.pic{font-size:1.05rem;flex-shrink:0;}.pin{font-size:.79rem;font-weight:700;flex:1;}.pit{font-size:.59rem;color:var(--mu);}
+.cl0{display:flex;flex-direction:column;gap:6px;}
+.ci{background:var(--w);border:1.5px solid var(--bd);border-left:4px solid #1E88E5;border-radius:10px;padding:10px 12px;}
+.cn{font-size:.82rem;font-weight:700;margin-bottom:4px;}.cm{display:flex;gap:4px;flex-wrap:wrap;}
+
+/* GANTT */
+.gw{overflow-x:auto;margin-top:8px;}
+.gn{min-width:550px;}
+.gr{display:grid;grid-template-columns:120px 1fr;gap:6px;align-items:center;margin-bottom:5px;}
+.glb{font-size:.68rem;font-weight:700;line-height:1.25;}
+.gtk{height:19px;background:var(--bg);border-radius:5px;border:1px solid var(--bd);position:relative;overflow:hidden;}
+.gbr{height:100%;border-radius:5px;background:var(--cc);position:absolute;display:flex;align-items:center;padding:0 5px;font-size:.55rem;font-weight:700;color:#fff;overflow:hidden;transition:width .6s;}
+.gml{display:flex;margin-bottom:3px;margin-left:126px;font-size:.52rem;color:var(--mu);font-family:var(--fm);}
+.gml span{flex:1;text-align:center;}
+
+/* ALUNOS / BANCAS */
+.all{display:flex;flex-direction:column;gap:7px;}
+.alc{background:var(--w);border:1.5px solid var(--bd);border-left:4px solid var(--cc);border-radius:10px;padding:11px 13px;}
+.aln{font-size:.85rem;font-weight:800;margin-bottom:4px;}.alt{font-size:.76rem;color:var(--tx);margin-bottom:4px;font-style:italic;line-height:1.3;}
+.alm{display:flex;gap:5px;flex-wrap:wrap;}
+.bcl{display:flex;flex-direction:column;gap:7px;}
+.bcc{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;}
+.bci{font-size:1.3rem;flex-shrink:0;}.bcn{font-size:.82rem;font-weight:700;flex:1;}.bcm{font-size:.66rem;color:var(--mu);margin-top:3px;}
+.rll{display:flex;flex-direction:column;gap:7px;}
+.rlc{background:var(--w);border:1.5px solid var(--bd);border-left:4px solid var(--cc);border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:9px;}
+.rln{font-size:.82rem;font-weight:700;flex:1;}.rlm{font-size:.63rem;color:var(--mu);}
+
+/* PESSOAL */
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px;}
+.dc{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:12px;text-align:center;}
+.di2{font-size:1.6rem;margin-bottom:4px;}.dn{font-size:.74rem;font-weight:700;}.dv{font-size:.64rem;color:var(--mu);margin-top:2px;font-family:var(--fm);}
+
+/* AGENDA */
+.aw-m{background:linear-gradient(135deg,#8E24AA,#1E88E5);border-radius:var(--rr);padding:17px;color:#fff;margin-bottom:11px;position:relative;overflow:hidden;}
+.aw-m::before{content:'✨';position:absolute;right:13px;bottom:6px;font-size:1.7rem;opacity:.22;}
+.dnv{display:flex;align-items:center;justify-content:space-between;background:var(--w);border:1.5px solid var(--bd);border-radius:12px;padding:9px 13px;margin-bottom:9px;}
+.dnb{background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--mu);padding:2px 7px;}
+.dnc{font-weight:800;font-size:.9rem;}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:9px;}
+.cd2{text-align:center;font-size:.54rem;font-weight:800;color:var(--mu);padding:3px;}
+.cd{aspect-ratio:1;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.72rem;font-weight:600;position:relative;}
+.cd:hover{background:var(--bd);}.cd.td{background:var(--ag);color:#fff;font-weight:900;}.cd.om{color:var(--bd);}
+.evc{background:var(--w);border:1.5px solid var(--bd);border-radius:12px;padding:13px;}
+
+/* AA */
+.bom-card{background:var(--w);border:1.5px solid var(--bd);border-left:5px solid var(--aa);border-radius:12px;padding:11px 12px;transition:box-shadow .2s;}
+.bom-card:hover{box-shadow:0 4px 15px rgba(0,0,0,.08);}
+.link-tag{display:inline-flex;align-items:center;gap:4px;background:#e8f5e9;color:#2e7d32;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:6px;cursor:pointer;text-decoration:none;}
+.link-tag:hover{background:#c8e6c9;}
+
+/* PERFIL */
+.av-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.av-btn{cursor:pointer;text-align:center;width:54px;transition:transform .15s;}.av-btn:hover{transform:scale(1.1);}
+.av-emoji{font-size:1.8rem;line-height:1;transition:all .2s;}.av-emoji.sel{font-size:2.3rem;filter:drop-shadow(0 0 6px rgba(142,36,170,.5));}
+.av-lbl{font-size:.54rem;font-weight:700;color:var(--mu);margin-top:2px;}.av-lbl.sel{color:var(--cc);}
+.av-photo{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--cc);}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:12px;}
+.ov.op{display:flex;animation:fi .2s ease;}
+.md{background:var(--w);border-radius:19px 19px 12px 12px;padding:19px 17px 17px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,.15);animation:su .27s cubic-bezier(.4,0,.2,1);}
+.mt0{font-size:.96rem;font-weight:900;margin-bottom:12px;color:var(--cc);}
+.mb{display:flex;gap:8px;margin-top:13px;}
+.bcn2{flex:1;background:var(--bg);border:1.5px solid var(--bd);border-radius:9px;padding:9px;font-family:var(--ff);font-size:.79rem;font-weight:700;color:var(--mu);cursor:pointer;}
+.bsv{flex:2;border:none;border-radius:9px;padding:9px;font-family:var(--ff);font-size:.79rem;font-weight:800;color:#fff;cursor:pointer;}
+
+/* NAV */
+.bnn{position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--w);border-top:1.5px solid var(--bd);z-index:80;display:flex;align-items:center;justify-content:space-around;box-shadow:0 -3px 13px rgba(0,0,0,.07);}
+.bn{background:none;border:none;font-size:1.2rem;cursor:pointer;padding:6px 8px;border-radius:10px;transition:transform .15s;position:relative;}.bn:active{transform:scale(.85);}
+.bnd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--art);border:2px solid var(--w);}
+
+/* UTILS */
+.es{text-align:center;padding:32px 17px;color:var(--mu);}
+.es .ei{font-size:2.1rem;margin-bottom:6px;}.es p{font-size:.77rem;font-weight:600;}
+.tst{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--tx);color:#fff;padding:8px 17px;border-radius:27px;font-size:.72rem;font-weight:700;opacity:0;pointer-events:none;transition:all .3s;z-index:999;white-space:nowrap;}
+.tst.sh{opacity:1;transform:translateX(-50%) translateY(0);}
+.sti{font-size:.61rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:6px;margin-top:13px;display:flex;align-items:center;justify-content:space-between;}.sti:first-child{margin-top:0;}
+.ia{font-size:.66rem;color:var(--cc);font-weight:700;cursor:pointer;border:1px solid var(--cc);border-radius:6px;padding:2px 7px;}.ia:hover{background:var(--cc);color:#fff;}
+.dv0{height:1px;background:var(--bd);margin:8px 0;}
+@media(max-width:480px){.proj-layout{flex-direction:column;}.proj-menu{flex-direction:row;flex-wrap:wrap;min-width:0;}.pm{width:40px;height:40px;}}
+
+/* UPLOAD PROGRESS */
+.upload-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;}
+.upload-overlay.show{display:flex;}
+.upload-box{background:var(--w);border-radius:18px;padding:28px;width:280px;text-align:center;}
+.upload-circle{width:70px;height:70px;border-radius:50%;border:4px solid var(--bd);border-top-color:var(--cc);animation:spin .8s linear infinite;margin:0 auto 14px;}
+.upload-pct{font-size:1.5rem;font-weight:900;color:var(--cc);}
+.upload-name{font-size:.75rem;color:var(--mu);margin-top:6px;word-break:break-all;}
+</style>
+</head>
+<body>
+
+<!-- UPLOAD OVERLAY -->
+<div class="upload-overlay" id="uploadOv">
+  <div class="upload-box">
+    <div class="upload-circle"></div>
+    <div class="upload-pct" id="upPct">0%</div>
+    <div class="upload-name" id="upName">Enviando arquivo...</div>
+  </div>
+</div>
+
+<!-- CONFIG SCREEN (shown when no Firebase configured) -->
+<div id="s-cfg" class="sc on">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">S·<b>O·P·A</b></div>
+      <div class="auth-sub">Sistema Operacional Pessoal e Acadêmico</div>
+
+      <div style="margin-bottom:16px">
+        <div class="cfg-step">
+          <div class="cfg-title"><span class="cfg-num">1</span> Cole suas credenciais Firebase</div>
+          <div class="cfg-body">Acesse <strong>console.firebase.google.com</strong> → seu projeto → ⚙️ Configurações → Seus apps → &lt;/&gt; Web → copie o firebaseConfig</div>
+        </div>
+
+        <label class="fl" style="margin-top:12px">apiKey</label>
+        <input class="fi" id="cfg-apiKey" value="AIzaSyCSTBNmzHJE-vIw6jEjlOVE_9femj5n3k8">
+        <label class="fl">authDomain</label>
+        <input class="fi" id="cfg-authDomain" value="sopa-fd8b8.firebaseapp.com">
+        <label class="fl">projectId</label>
+        <input class="fi" id="cfg-projectId" value="sopa-fd8b8">
+        <label class="fl">storageBucket</label>
+        <input class="fi" id="cfg-storageBucket" value="sopa-fd8b8.firebasestorage.app">
+        <label class="fl">messagingSenderId</label>
+        <input class="fi" id="cfg-messagingSenderId" value="962393498465">
+        <label class="fl">appId</label>
+        <input class="fi" id="cfg-appId" value="1:962393498465:web:fc2023af290ce9b6a31b20">
+
+        <button class="sb" style="width:100%;margin-top:14px;padding:12px;font-size:.9rem" onclick="saveConfig()">
+          🔥 Conectar ao Firebase
+        </button>
+      </div>
+
+      <div style="background:#fff8e1;border-radius:10px;padding:12px;font-size:.72rem;color:#e65100;line-height:1.6">
+        <strong>💡 Modo demonstração:</strong> Você também pode usar o SOPA sem Firebase — os dados ficam só neste dispositivo e os arquivos não são salvos na nuvem.
+        <br><br>
+        <button onclick="useDemoMode()" style="background:#FB8C00;border:none;border-radius:8px;color:#fff;padding:8px 16px;font-family:var(--ff);font-size:.78rem;font-weight:700;cursor:pointer;width:100%">
+          Usar modo demonstração (sem nuvem)
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="s-login" class="sc">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">S·<b>O·P·A</b></div>
+      <div class="auth-sub">Faça login para acessar seu sistema</div>
+
+      <button class="auth-btn-google" onclick="loginGoogle()">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Entrar com Google
+      </button>
+
+      <div class="auth-divider">ou</div>
+
+      <button onclick="useDemoMode()" style="width:100%;background:var(--bg);border:1.5px solid var(--bd);border-radius:12px;padding:12px;font-family:var(--ff);font-size:.82rem;font-weight:700;cursor:pointer;color:var(--mu);">
+        Continuar sem login (modo demo)
+      </button>
+
+      <div style="margin-top:16px;text-align:center;font-size:.68rem;color:var(--mu);line-height:1.5">
+        Ao entrar, seus dados ficam salvos na nuvem<br>e acessíveis em qualquer dispositivo.<br><br>
+        <strong>Projeto:</strong> sopa-fd8b8 · Firebase ativo ☁️
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR (shown when logged in) -->
+<header class="topbar" id="topbar" style="display:none">
+  <div class="logo">S·<b>O·P·A</b></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="sync-dot" id="syncDot" title="Sincronizado"></div>
+    <span class="dpill" id="dEl"></span>
+    <div class="user-av" id="userAv" onclick="openPerfil()" title="Perfil">👤</div>
+  </div>
+</header>
+
+<!-- APP SCREENS -->
+<div id="sh"  class="sc"></div>
+<div id="sl"  class="sc"></div>
+<div id="sad" class="sc"></div>
+<div id="spd" class="sc"></div>
+<div id="sag" class="sc"></div>
+<div id="saa" class="sc"></div>
+<div id="spr" class="sc"></div>
+<div id="sgd" class="sc"></div>
+
+<!-- MODAL -->
+<div class="ov" id="ov">
+  <div class="md">
+    <div class="mt0" id="mTi"></div>
+    <div id="mBd"></div>
+    <div class="mb">
+      <button class="bcn2" onclick="closeModal()">Cancelar</button>
+      <button class="bsv" id="mSv" onclick="doSave()">Salvar</button>
+    </div>
+  </div>
+</div>
+<div class="tst" id="tst"></div>
+
+<!-- BOTTOM NAV (shown when logged in) -->
+<nav class="bnn" id="botNav" style="display:none">
+  <button class="bn" onclick="goHome()">🏠</button>
+  <button class="bn" onclick="openList('art')">📄</button>
+  <button class="bn" onclick="openList('proj')">🔬</button>
+  <button class="bn" onclick="openList('app')">⚡</button>
+  <button class="bn" onclick="openAA()">📋</button>
+  <button class="bn" onclick="openAgenda()">📅<span class="bnd"></span></button>
+  <button class="bn" onclick="openPerfil()">👤</button>
+</nav>
+
+<script>
+// ════════════════════════════════════════════
+// FIREBASE CONFIG
+// ════════════════════════════════════════════
+let db = null, auth = null, storage = null, currentUser = null;
+let FIREBASE_MODE = false; // true = Firebase, false = demo
+let SYNC_PENDING = false;
+
+function saveConfig() {
+  const config = {
+    apiKey: document.getElementById('cfg-apiKey').value.trim() || FIREBASE_CONFIG.apiKey,
+    authDomain: document.getElementById('cfg-authDomain').value.trim() || FIREBASE_CONFIG.authDomain,
+    projectId: document.getElementById('cfg-projectId').value.trim() || FIREBASE_CONFIG.projectId,
+    storageBucket: document.getElementById('cfg-storageBucket').value.trim() || FIREBASE_CONFIG.storageBucket,
+    messagingSenderId: document.getElementById('cfg-messagingSenderId').value.trim() || FIREBASE_CONFIG.messagingSenderId,
+    appId: document.getElementById('cfg-appId').value.trim() || FIREBASE_CONFIG.appId,
+  };
+  localStorage.setItem('sopa_firebase_config', JSON.stringify(config));
+  initFirebase(config);
+}
+
+function initFirebase(config) {
+  try {
+    if (typeof firebase === 'undefined') {
+      console.error('Firebase SDK não disponível');
+      showOfflineWarning && showOfflineWarning();
+      useDemoMode();
+      return;
+    }
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
+    auth = firebase.auth();
+    db = firebase.firestore();
+    storage = firebase.storage();
+    FIREBASE_MODE = true;
+
+    // Listen for auth state
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        onUserLogin(user);
+      } else {
+        show('s-login');
+        document.getElementById('topbar').style.display = 'none';
+        document.getElementById('botNav').style.display = 'none';
+      }
+    });
+
+    show('s-login');
+  } catch(e) {
+    toast('Erro ao conectar: ' + e.message);
+    console.error(e);
+  }
+}
+
+function loginGoogle() {
+  if (!auth) { toast('Configure o Firebase primeiro'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => {
+    toast('Erro no login: ' + e.message);
+  });
+}
+
+function logout() {
+  if (auth) auth.signOut();
+  else {
+    currentUser = null;
+    resetData();
+    show('s-cfg');
+    document.getElementById('topbar').style.display = 'none';
+    document.getElementById('botNav').style.display = 'none';
+  }
+}
+
+function useDemoMode() {
+  FIREBASE_MODE = false;
+  currentUser = { uid: 'demo', displayName: 'Usuário Demo', email: 'demo@sopa.app', photoURL: null };
+  onUserLogin(currentUser);
+  toast('Modo demonstração — dados salvos só neste dispositivo');
+}
+
+async function onUserLogin(user) {
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('botNav').style.display = 'flex';
+
+  // Update UI
+  const av = document.getElementById('userAv');
+  if (user.photoURL) {
+    av.innerHTML = `<img src="${user.photoURL}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">`;
+  } else {
+    av.textContent = user.displayName ? user.displayName[0].toUpperCase() : '👤';
+  }
+
+  if (FIREBASE_MODE) {
+    await loadFromFirestore(user.uid);
+  } else {
+    // Load from localStorage
+    const saved = localStorage.getItem('sopa_data_demo');
+    if (saved) {
+      try { const parsed = JSON.parse(saved); Object.assign(DATA, parsed.DATA||{}); DATA_AA = parsed.DATA_AA||DATA_AA; WEEK = parsed.WEEK||WEEK; PERFIL = {...PERFIL,...(parsed.PERFIL||{})}; } catch(e) {}
+    }
+  }
+
+  // Set perfil name from Google
+  if (!PERFIL.nome || PERFIL.nome === 'Ernandes Sobreira Oliveira Junior') {
+    if (user.displayName) PERFIL.nome = user.displayName;
+  }
+
+  goHome();
+}
+
+// ════════════════════════════════════════════
+// FIRESTORE SYNC
+// ════════════════════════════════════════════
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (status === 'syncing' ? ' syncing' : status === 'offline' ? ' offline' : '');
+  dot.title = status === 'syncing' ? 'Sincronizando...' : status === 'offline' ? 'Sem conexão' : 'Sincronizado';
+}
+
+async function loadFromFirestore(uid) {
+  setSyncStatus('syncing');
+  try {
+    const docRef = db.collection('users').doc(uid).collection('sopa').doc('data');
+    const snap = await docRef.get();
+    if (snap.exists) {
+      const d = snap.data();
+      if (d.DATA) Object.assign(DATA, d.DATA);
+      if (d.DATA_AA) DATA_AA = d.DATA_AA;
+      if (d.WEEK) WEEK = d.WEEK;
+      if (d.PERFIL) PERFIL = {...PERFIL, ...d.PERFIL};
+    }
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('offline');
+    toast('Erro ao carregar dados: ' + e.message);
+    console.error(e);
+  }
+}
+
+let saveTimer = null;
+function scheduleSync() {
+  if (!FIREBASE_MODE || !currentUser) {
+    // Demo mode: save to localStorage
+    const toSave = { DATA, DATA_AA, WEEK, PERFIL };
+    localStorage.setItem('sopa_data_demo', JSON.stringify(toSave));
+    return;
+  }
+  setSyncStatus('syncing');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveToFirestore(), 1500);
+}
+
+async function saveToFirestore() {
+  if (!currentUser || !db) return;
+  try {
+    const docRef = db.collection('users').doc(currentUser.uid).collection('sopa').doc('data');
+    await docRef.set({ DATA, DATA_AA, WEEK, PERFIL, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('offline');
+    console.error('Sync error:', e);
+  }
+}
+
+// ════════════════════════════════════════════
+// STORAGE — UPLOAD REAL
+// ════════════════════════════════════════════
+async function uploadFileToStorage(file, fk, itemId, onDone) {
+  if (!FIREBASE_MODE || !currentUser) {
+    // Demo mode: store as fake entry
+    onDone({ name: file.name, size: fmtSz(file.size), url: null, demo: true });
+    return;
+  }
+
+  const path = `users/${currentUser.uid}/${fk}/${itemId}/${Date.now()}_${file.name}`;
+  const ref = storage.ref(path);
+  const uploadTask = ref.put(file);
+
+  // Show upload overlay
+  const ov = document.getElementById('uploadOv');
+  const pct = document.getElementById('upPct');
+  const nm = document.getElementById('upName');
+  ov.classList.add('show');
+  nm.textContent = file.name;
+
+  uploadTask.on('state_changed',
+    snap => {
+      const p = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+      pct.textContent = p + '%';
+    },
+    err => {
+      ov.classList.remove('show');
+      toast('Erro no upload: ' + err.message);
+    },
+    async () => {
+      const url = await uploadTask.snapshot.ref.getDownloadURL();
+      ov.classList.remove('show');
+      onDone({ name: file.name, size: fmtSz(file.size), url, path });
+    }
+  );
+}
+
+async function deleteFileFromStorage(path) {
+  if (!FIREBASE_MODE || !path) return;
+  try { await storage.ref(path).delete(); } catch(e) { console.warn('Delete error:', e); }
+}
+
+// ════════════════════════════════════════════
+// APP CONFIG
+// ════════════════════════════════════════════
+const FR={
+  art:{e:'📄',l:'ART',n:'Artigos Científicos',c:'#E53935',cats:['Todos','Artigos','Resumos','Capítulos','Livros','UNESCO/Relatórios'],st:['planejando','escrevendo','revisao','submetido','aceito','publicado'],ex:[{k:'journal',l:'Periódico / Destino'},{k:'coautores',l:'Coautores'}]},
+  proj:{e:'🔬',l:'PROJETOS',n:'Projetos',c:'#1E88E5',cats:['Todos','Pesquisa','Ensino','Extensão','Inovação','Campo'],st:['planejando','em andamento','campo','revisao','concluido'],ex:[{k:'financiador',l:'Financiador'},{k:'local',l:'Local'},{k:'vigencia',l:'Vigência'},{k:'portaria',l:'Portaria'}]},
+  app:{e:'⚡',l:'APPS',n:'Apps & Plataformas',c:'#43A047',cats:['Todos','Publicados','Em dev','Ideias','Educacionais'],st:['planejando','dev','beta','publicado'],ex:[{k:'tech',l:'Tecnologia'},{k:'url',l:'URL'}]},
+  pessoa:{e:'🏠',l:'PESSOAL',n:'Vida Pessoal',c:'#FB8C00',cats:['Todos','Documentos','Saúde','Família','Finanças','Viagens','Memórias'],st:['planejando','em andamento','concluido'],ex:[{k:'obs',l:'Observação'}]},
+};
+const MOTS=[
+  {t:'A ciência é a beleza do mundo tornada visível pela razão.',a:'— Pascal'},
+  {t:'Não é a força, mas a constância dos esforços que faz grandes obras.',a:'— Darwin'},
+  {t:'Um rio não para de correr por ter pedras no caminho.',a:'— provérbio'},
+  {t:'Fechar um artigo vale mais que abrir três novos.',a:'— SOPA'},
+  {t:'O Pantanal respira. Você cuida desse respiro com cada linha que escreve.',a:'— SOPA'},
+  {t:'A melhor hora de plantar uma árvore foi há 20 anos. A segunda melhor é agora.',a:'— provérbio'},
+  {t:'Cada dado coletado é uma palavra na linguagem que a natureza fala.',a:'— SOPA'},
+];
+const SC_MAP={planejando:'s-plan',escrevendo:'s-esc',revisao:'s-rev',submetido:'s-sub',aceito:'s-ace',publicado:'s-pub',campo:'s-cam',dev:'s-dev','em andamento':'s-and',concluido:'s-con',beta:'s-sub'};
+const SL={planejando:'Planejando',escrevendo:'Escrevendo',revisao:'Em revisão',submetido:'Submetido',aceito:'Aceito',publicado:'Publicado',campo:'Em campo',dev:'Em dev','em andamento':'Em andamento',concluido:'Concluído',beta:'Beta'};
+const UO={alta:0,media:1,baixa:2};
+const PI={artigo:'📄',resumo:'📋',capitulo:'📖',livro:'📚',evento:'🎪',relatorio:'📊',software:'💻',atlas:'🗺️',plataforma:'💻',outro:'📌'};
+const RC={coordenador:'#E53935',pesquisador:'#1E88E5',orientando:'#43A047',bolsista:'#FB8C00',colaborador:'#8E24AA',doutorando:'#00897B'};
+const AA_CATS=['Todos','Bancas','Pareceres','Reuniões','Eventos','Palestras','Comissões','Outras'];
+const AA_SC={pendente:'s-plan',agendado:'s-rev',realizado:'s-pub',cancelado:'s-cam'};
+const AA_SL={pendente:'Pendente',agendado:'Agendado',realizado:'Realizado',cancelado:'Cancelado'};
+const CAL_COLORS={Artigos:'#E53935',Projetos:'#1E88E5',Apps:'#43A047',AA:'#00897B',Bancas:'#8E24AA',Reunioes:'#FB8C00',Pareceres:'#F4511E',Eventos:'#0097A7',Palestras:'#7B1FA2',Coletas:'#2E7D32',Relatorios:'#455A64',Outros:'#757575'};
+let DATA={
+  art:[
+    {id:1,cat:'Artigos',name:'CO₂ flux zonas ecotonais Amazônia-Cerrado-Pantanal',status:'escrevendo',urgency:'alta',pct:75,journal:'Global Change Biology',coautores:'Ana Paula Dalbem, Claumir Muniz',notes:'Câmaras estáticas. Análise eddy covariance em revisão. Dados 2023-2025.',files:[{name:'manuscrito_v3.docx',size:'142 KB'},{name:'dados_GEE.xlsx',size:'2.1 MB'},{name:'fig1_mapa.png',size:'890 KB'}],team:['Ana Paula Dalbem — coautora','Claumir Cesar Muniz — coautor'],dates:[{l:'Submissão alvo',v:'2026-05-30',s:'warn'}],abstract:'',keywords:'',doi:'',impact:''},
+    {id:2,cat:'Artigos',name:'PM2.5 qualidade do ar no Pantanal (94 municípios)',status:'revisao',urgency:'alta',pct:88,journal:'Atmospheric Environment',coautores:'Wilkinson Lázaro',notes:'Análise espacial concluída. Falta discussão e abstract final.',files:[{name:'PM25_analysis.R',size:'34 KB'},{name:'supplementary.xlsx',size:'1.2 MB'}],team:['Wilkinson Lopes Lázaro — coautor'],dates:[{l:'Meta submissão',v:'2026-04-20',s:'warn'}],abstract:'',keywords:'PM2.5; Pantanal; air quality',doi:'',impact:'4.2'},
+    {id:3,cat:'Artigos',name:'Ecologia de incêndios no Pantanal',status:'revisao',urgency:'media',pct:82,journal:'PECON',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:4,cat:'Artigos',name:'Mortalidade cardiovascular e clima em Cuiabá',status:'escrevendo',urgency:'media',pct:60,journal:'IJERPH/MDPI',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:'4.6'},
+    {id:5,cat:'Artigos',name:'Índice de Intensidade da Decoada (IID) — Rio Paraguai',status:'escrevendo',urgency:'media',pct:45,journal:'Acta Limnologica Brasiliensia',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'decoada; Pantanal; Rio Paraguai',doi:'',impact:''},
+    {id:6,cat:'Artigos',name:'IFZ — Wetland Functional Index global',status:'escrevendo',urgency:'baixa',pct:30,journal:'Wetlands Ecol. & Mgmt',coautores:'Ana Paula Dalbem',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:7,cat:'Artigos',name:'Highland vs Floodplain Pantanal — comparação climática',status:'escrevendo',urgency:'media',pct:50,journal:"RA'E GA",coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:8,cat:'Artigos',name:'Bibliometria: carbono no Pantanal',status:'planejando',urgency:'baixa',pct:15,journal:'Wetlands',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:9,cat:'Artigos',name:'Comunidades de macroinvertebrados aquáticos',status:'revisao',urgency:'media',pct:70,journal:'Hydrobiologia',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:10,cat:'Artigos',name:'Reprodução de peixes no Pantanal',status:'revisao',urgency:'baixa',pct:65,journal:'Neotropical Ichthyology',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:11,cat:'Artigos',name:'Ictiocoria e dispersão de sementes',status:'escrevendo',urgency:'baixa',pct:40,journal:'Biotropica',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:''},
+    {id:12,cat:'Artigos',name:'Mortalidade cardiorrespiratória — municípios MT',status:'escrevendo',urgency:'alta',pct:55,journal:'IJERPH/MDPI',coautores:'',notes:'',files:[],team:[],dates:[],abstract:'',keywords:'',doi:'',impact:'4.6'},
+    {id:13,cat:'UNESCO/Relatórios',name:'Produto 4 — Curso EaD Clima & Água UNESCO/ANA/ABC',status:'revisao',urgency:'alta',pct:80,journal:'UNESCO SA-1383/2025',coautores:'',notes:'Prazo urgente.',files:[],team:[],dates:[{l:'Entrega Produto 4',v:'2026-04-15',s:'over'}],abstract:'',keywords:'',doi:'',impact:''},
+    {id:14,cat:'Resumos',name:'Resumo CBL 2026 — Pantanal: passado do pretérito',status:'planejando',urgency:'alta',pct:20,journal:'XX CBL — UFJF',coautores:'Claumir Muniz, Wilkinson Lázaro, Ana Paula Dalbem',notes:'Mesa redonda jul/2026 UFJF',files:[],team:[],dates:[{l:'Submissão resumo',v:'2026-05-01',s:'warn'}],abstract:'',keywords:'',doi:'',impact:''},
+  ],
+  proj:[
+    {id:1,cat:'Pesquisa',name:'Carbono Vivo: Sustentabilidade e Saúde Ambiental nos Biomas Brasileiros',status:'campo',urgency:'alta',pct:60,
+     financiador:'FAPEMAT',local:'Cáceres-MT / Pantanal',vigencia:'2025-2027',portaria:'Portaria nº 571/2025',
+     notes:'Câmara estática manual. Fluxos CO₂, CH₄, N₂O. Coordenação: Ernandes Sobreira.',
+     files:[{name:'protocolo_coleta_GEE.pdf',size:'220 KB'},{name:'planilha_dados_campo.xlsx',size:'1.8 MB'}],
+     team:['Ernandes Sobreira — coordenador','Wilkinson Lopes Lázaro — membro','Claumir Cesar Muniz — membro','Rodrigo Bruno Zanin — membro'],
+     dates:[{l:'Próxima coleta',v:'2026-04-18',s:'warn'},{l:'Relatório FAPEMAT',v:'2026-06-30',s:'ok'}],
+     metas:[{name:'Coletas mensais (n=12)',pct:75},{name:'Artigo CO₂ submetido',pct:88},{name:'Artigo CH₄ em escrita',pct:45},{name:'Estoque carbono calculado',pct:60}],
+     orcamento:[{nome:'FAPEMAT parcela 1/2025',cat:'Receita',tipo:'entrada',val:15000},{nome:'Passagens campo 2026',cat:'Deslocamento',tipo:'saida',val:1200},{nome:'Material coleta (seringas, frascos)',cat:'Material',tipo:'saida',val:890},{nome:'Análise GC laboratório',cat:'Laboratório',tipo:'saida',val:3200}],
+     produtos:[{tipo:'artigo',nome:'CO₂ flux zonas ecotonais (Global Change Biology)',status:'em escrita'},{tipo:'relatorio',nome:'Relatório parcial FAPEMAT 2025',status:'entregue'},{tipo:'software',nome:'Pipeline GEE — fluxo carbono Pantanal',status:'em desenvolvimento'}],
+     coletas:[{nome:'Coleta #1 — Pantanal Norte (câmara estática)',data:'2026-02-15',local:'Estação UNEMAT, Cáceres',status:'realizada',obs:'20 câmaras instaladas. Dados enviados ao GC.'},{nome:'Coleta #2 — Ecótono cerrado',data:'2026-03-20',local:'Fazenda São João, MT-343',status:'realizada',obs:'15/20 amostras válidas (chuva intensa).'},{nome:'Coleta #3 — Pantanal Sul',data:'2026-04-18',local:'A definir',status:'agendada',obs:''}],
+     alunos:[{nome:'Estudante TCC 1',titulo:'Fluxos de CO₂ em zonas de interface cerrado-pantanal',orientador:'Ernandes Sobreira',previsao:'2026-12',status:'em andamento'},{nome:'Mestrando PPGCA 1',titulo:'Estoque de carbono em solos ripários do Pantanal mato-grossense',orientador:'Ernandes Sobreira',previsao:'2027-06',status:'em andamento'}],
+     bancas:[{tipo:'Qualificação',aluno:'Mestrando PPGCA 1',data:'2026-09-10',titulo:'Estoque de carbono em solos ripários',status:'agendada'},{tipo:'Defesa',aluno:'TCC 1',data:'2026-11-20',titulo:'Fluxos de CO₂',status:'agendada'}],
+     relatorios:[{nome:'Relatório parcial 1/2025',data:'2025-12-15',status:'entregue',obs:'Aprovado pela FAPEMAT.'},{nome:'Relatório anual 2026',data:'2026-12-30',status:'pendente',obs:''}]
+    },
+    {id:2,cat:'Pesquisa',name:'BRASA — Biogeochemistry, Restoration and Ash Studies (Radboud/UNEMAT)',status:'campo',urgency:'media',pct:70,
+     financiador:'Radboud University (NL)',local:'UNEMAT Cáceres + Radboud NL',vigencia:'2023-2026',portaria:'Acordo de cooperação',
+     notes:'Mesocosmos 20L. Fitorremediação aguapé. Cotutela Ana Paula em andamento.',
+     files:[{name:'BRASA_dados_campo.xlsx',size:'1.8 MB'},{name:'protocolo_experimento.pdf',size:'340 KB'}],
+     team:['Ernandes Sobreira — coordenador UNEMAT','Ana Paula Dalbem — doutoranda (cotutela)','Radboud University — parceiro internacional','Claumir Cesar Muniz — colaborador'],
+     dates:[{l:'Defesa cotutela Ana Paula',v:'2026-09-01',s:'ok'},{l:'Relatório Radboud',v:'2026-07-01',s:'ok'}],
+     metas:[{name:'Experimentos mesocosmo concluídos',pct:85},{name:'Artigo GHG aguapé submetido',pct:60},{name:'Tese Ana Paula — capítulos',pct:70},{name:'Plataforma BRASA dados',pct:90}],
+     orcamento:[{nome:'Missão científica Radboud',cat:'Receita',tipo:'entrada',val:8000},{nome:'Reagentes laboratório',cat:'Laboratório',tipo:'saida',val:2300},{nome:'Diárias campo',cat:'Deslocamento',tipo:'saida',val:1500}],
+     produtos:[{tipo:'artigo',nome:'Water hyacinth GHG emissions (Global Change Biology)',status:'em revisão'},{tipo:'software',nome:'Plataforma BRASA — dados campo',status:'publicado'},{tipo:'relatorio',nome:'Relatório técnico Radboud 2025',status:'entregue'}],
+     coletas:[{nome:'Experimento mesocosmo série 1 — aguapé',data:'2026-01-10',local:'Laboratório UNEMAT',status:'realizada',obs:'4 tratamentos × 5 réplicas. GHG medido.'},{nome:'Amostragem GHG série 2',data:'2026-03-05',local:'Laboratório UNEMAT',status:'realizada',obs:'Resultados confirmam série 1.'}],
+     alunos:[{nome:'Ana Paula Dalbem Barbosa',titulo:'Fitorremediação de aguapé em mesocosmos: fluxos de gases de efeito estufa',orientador:'Ernandes Sobreira (UNEMAT) + co-orientador Radboud',previsao:'2026-09',status:'defesa agendada'}],
+     bancas:[{tipo:'Defesa Cotutela',aluno:'Ana Paula Dalbem Barbosa',data:'2026-09-01',titulo:'Fitorremediação de aguapé — GHG',status:'agendada'}],
+     relatorios:[{nome:'Relatório anual Radboud 2025',data:'2025-12-01',status:'entregue',obs:''},{nome:'Relatório final 2026',data:'2026-12-01',status:'pendente',obs:''}]
+    },
+    {id:3,cat:'Extensão',name:'Transforma-Ações em Rede — COP30 (UNEMAT)',status:'em andamento',urgency:'alta',pct:45,
+     financiador:'UNEMAT',local:'Cáceres-MT / Belém-PA',vigencia:'2024-2026',portaria:'Portaria nº 1285/2025',
+     notes:'12 tendas temáticas COP30. Coordenação Ernandes + Castrillon.',
+     files:[],team:['Ernandes Sobreira — coordenador','Solange Castrillon — coordenadora','Equipe extensão UNEMAT'],
+     dates:[{l:'COP30 Belém',v:'2025-11-10',s:'warn'},{l:'Relatório extensão UNEMAT',v:'2026-07-01',s:'ok'}],
+     metas:[{name:'12 tendas temáticas prontas',pct:40},{name:'Material pedagógico produzido',pct:60},{name:'Parceiros confirmados',pct:75},{name:'Inscritos plataforma COP Mirim',pct:80}],
+     orcamento:[],
+     produtos:[{tipo:'evento',nome:'COP Pantanal 2025',status:'concluído'},{tipo:'outro',nome:'Material 12 tendas',status:'em produção'},{tipo:'plataforma',nome:'COP Mirim — plataforma educacional',status:'publicado'}],
+     coletas:[],alunos:[],bancas:[],
+     relatorios:[{nome:'Relatório semestral extensão 2025',data:'2025-12-01',status:'entregue',obs:''}]
+    },
+    {id:4,cat:'Pesquisa',name:'IA Aplicada à Gestão Sustentável e Modelagem Preditiva de RH no Pantanal',status:'em andamento',urgency:'media',pct:55,
+     financiador:'CNPq',local:'UNEMAT Cáceres',vigencia:'2026-2028',portaria:'Portaria nº 396/2026',
+     notes:'Coordenação: Lledo dos Santos. Ernandes membro.',
+     files:[],
+     team:['Francisco Lledo dos Santos — coordenador','Ernandes Sobreira — membro','Rodrigo Zanin — membro','Alexandre Porto — membro','Érico Martins — membro'],
+     dates:[{l:'Relatório CNPq 2026',v:'2026-12-01',s:'ok'}],
+     metas:[{name:'Modelos LSTM treinados',pct:40},{name:'Base dados hidrológicos',pct:65},{name:'Artigo IA vazão submetido',pct:20}],
+     orcamento:[{nome:'CNPq parcela 1',cat:'Receita',tipo:'entrada',val:50000}],
+     produtos:[{tipo:'software',nome:'Modelos LSTM vazão Pantanal (GitHub)',status:'em desenvolvimento'},{tipo:'artigo',nome:'AI for water management Pantanal',status:'planejado'}],
+     coletas:[],alunos:[],bancas:[],relatorios:[]
+    },
+    {id:5,cat:'Pesquisa',name:'Projeto Estruturante PROFÁGUA 2026-2028 — Bacias Hidrográficas e Ordenamento',status:'em andamento',urgency:'alta',pct:30,
+     financiador:'CAPES/FAPEMAT/CNPq',local:'Mato Grosso',vigencia:'2026-2028',portaria:'Projeto Estruturante PROFÁGUA',
+     notes:'Ernandes coordena Linhas 1 e 2. 14 pesquisadores permanentes.',
+     files:[{name:'Projeto_Estruturante_PROFAGUA_v5.docx',size:'245 KB'}],
+     team:['Amintas Rossete — coordenador geral','Ernandes Sobreira — pesquisador L1/L2','Claumir Muniz — pesquisador L2/L3','Wilkinson Lázaro — pesquisador L1/L2','Tadeu Queiroz — pesquisador L1/L2','Rodrigo Zanin — pesquisador L1/L3','Francisco Lledo — pesquisador L1','Érico Martins — pesquisador L1/L3','Alexandre Porto — pesquisador L2/L3','Anderson Amaral — pesquisador L1/L3','Adley Abreu — pesquisador L2','Fátima Iocca — pesquisadora L3','Solange Arrolho — pesquisadora L3','Solange Castrillon — pesquisadora L3'],
+     dates:[{l:'Relatório anual 2026',v:'2026-12-31',s:'ok'},{l:'CBL 2026 — mesa redonda',v:'2026-07-15',s:'ok'},{l:'Atlas Digital bacias MT',v:'2028-12-01',s:'ok'}],
+     metas:[{name:'24 artigos publicados (A1-B1)',pct:20},{name:'14 capítulos de livro',pct:10},{name:'30 dissertações vinculadas',pct:25},{name:'9 workshops metodológicos',pct:15},{name:'Atlas Digital Bacias MT',pct:5},{name:'IEEB — índice ecológico',pct:20},{name:'Plataformas digitais públicas',pct:45}],
+     orcamento:[{nome:'CAPES custeio 2026',cat:'Receita',tipo:'entrada',val:120000},{nome:'Campanhas campo L1/L2',cat:'Campo',tipo:'saida',val:126000},{nome:'Aluguel embarcações Pantanal',cat:'Campo',tipo:'saida',val:125000},{nome:'Material coleta',cat:'Material',tipo:'saida',val:40000},{nome:'Câmaras GEE',cat:'Equipamento',tipo:'saida',val:40000}],
+     produtos:[{tipo:'atlas',nome:'Atlas Digital Bacias Hidrográficas MT',status:'planejado'},{tipo:'software',nome:'Plataforma WebGIS bacias MT',status:'planejado'},{tipo:'livro',nome:'E-book síntese 2026-2028',status:'planejado'},{tipo:'plataforma',nome:'Plataforma monitoramento PROFÁGUA',status:'publicado'}],
+     coletas:[{nome:'Campanha campo L2 — Rio Paraguai #1',data:'2026-03-10',local:'Porto Estrela–ESEC Taiamã',status:'realizada',obs:'Variáveis físico-químicas + ictiologia.'},{nome:'Campanha campo L2 — Rio Paraguai #2',data:'2026-05-15',local:'Porto Estrela–ESEC Taiamã',status:'agendada',obs:''}],
+     alunos:[
+       {nome:'Aluno ProfÁgua 1',titulo:'Modelagem LSTM para predição de vazão no Pantanal',orientador:'Francisco Lledo dos Santos',previsao:'2027-06',status:'qualificação'},
+       {nome:'Aluno ProfÁgua 2',titulo:'Biodiversidade de macroinvertebrados — indicadores IEEB',orientador:'Claumir Muniz',previsao:'2027-12',status:'em andamento'},
+       {nome:'Aluno ProfÁgua 3',titulo:'Qualidade hídrica Bacia do Rio Sepotuba',orientador:'Alexandre Porto',previsao:'2027-06',status:'em andamento'},
+       {nome:'Aluno ProfÁgua 4',titulo:'Mercúrio em peixes do Pantanal',orientador:'Wilkinson Lázaro',previsao:'2027-12',status:'em andamento'},
+       {nome:'Aluno ProfÁgua 5',titulo:'Mapeamento vulnerabilidade hídrica assentamentos MT',orientador:'Rodrigo Zanin',previsao:'2028-06',status:'em andamento'},
+     ],
+     bancas:[
+       {tipo:'Qualificação',aluno:'Aluno ProfÁgua 1',data:'2026-08-20',titulo:'Modelagem LSTM — Pantanal',status:'agendada'},
+       {tipo:'Defesa',aluno:'Aluno ProfÁgua 2',data:'2027-12-01',titulo:'Macroinvertebrados IEEB',status:'prevista'},
+     ],
+     relatorios:[{nome:'Relatório anual PROFÁGUA 2025',data:'2025-12-31',status:'entregue',obs:''},{nome:'Relatório anual PROFÁGUA 2026',data:'2026-12-31',status:'pendente',obs:''}]
+    },
+  ],
+  app:[
+    {id:1,cat:'Publicados',name:'PROFÁGUA — sistema de diárias',status:'publicado',urgency:'baixa',pct:95,tech:'Firebase + GitHub Pages',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:2,cat:'Publicados',name:'BRASA — plataforma de dados de campo',status:'publicado',urgency:'baixa',pct:90,tech:'Firebase',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:3,cat:'Publicados',name:'Dashboard climatológico UNEMAT',status:'publicado',urgency:'baixa',pct:85,tech:'Chart.js + Firebase',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:4,cat:'Publicados',name:'Gerador de atas PPGCA',status:'publicado',urgency:'baixa',pct:100,tech:'HTML/JS',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:5,cat:'Publicados',name:'COP Mirim — plataforma educacional',status:'publicado',urgency:'baixa',pct:95,tech:'HTML/JS',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:6,cat:'Publicados',name:'Plataforma monitoramento PROFÁGUA',status:'publicado',urgency:'baixa',pct:85,tech:'Firebase + GitHub Pages',url:'https://ernandes-sobreira.github.io/projeto.estruturante-profagua/',notes:'',files:[],team:[],dates:[]},
+    {id:7,cat:'Em dev',name:'SOPA — sistema operacional pessoal',status:'dev',urgency:'alta',pct:35,tech:'HTML/Firebase',url:'',notes:'Este próprio sistema!',files:[],team:[],dates:[]},
+    {id:8,cat:'Em dev',name:'App de viagem família Kosten & Van Rosevelt',status:'dev',urgency:'media',pct:35,tech:'HTML/JS',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:9,cat:'Ideias',name:'Flora Urbana — startup plantio colaborativo',status:'planejando',urgency:'baixa',pct:10,tech:'A definir',url:'',notes:'',files:[],team:[],dates:[]},
+    {id:10,cat:'Educacionais',name:'Plataforma de cursos educacionais (venda)',status:'planejando',urgency:'baixa',pct:5,tech:'A definir',url:'',notes:'',files:[],team:[],dates:[]},
+  ],
+  pessoa:[
+    {id:1,cat:'Memórias',name:'Memórias de um Sertão Saudoso — livro do pai',status:'em andamento',urgency:'baixa',pct:25,obs:'~200 páginas estimadas.',notes:'Cap. 1-3 rascunhados.',files:[{name:'caderno_pai.pdf',size:'4.2 MB'}],team:[],dates:[{l:'Meta 50 páginas',v:'2026-06-01',s:'ok'}]},
+    {id:2,cat:'Viagens',name:'Bolívia — La Paz, Uyuni, Sucre, Santa Cruz',status:'planejando',urgency:'baixa',pct:15,obs:'La Paz→Uyuni→Sucre→Cochabamba→Santa Cruz',notes:'Pesquisar voos.',files:[],team:[],dates:[]},
+    {id:3,cat:'Documentos',name:'Organização documentos pessoais',status:'planejando',urgency:'media',pct:10,obs:'',notes:'',files:[],team:[],dates:[]},
+  ],
+};
+let DATA_AA=[
+  {id:1,cat:'Pareceres',name:'Parecer artigo — Hydrobiologia (macroinvertebrados)',status:'pendente',urgency:'alta',data:'2026-04-10',obs:'Manuscript ID: HYD-2026-0312. Prazo: 10/04.',links:[],files:[]},
+  {id:2,cat:'Bancas',name:'Banca qualificação PPGCA — carbono ripário',status:'agendado',urgency:'alta',data:'2026-09-10',obs:'Comissão: Ernandes, Claumir, externo.',links:[],files:[]},
+  {id:3,cat:'Bancas',name:'Defesa cotutela Ana Paula Dalbem (Radboud/UNEMAT)',status:'agendado',urgency:'alta',data:'2026-09-01',obs:'Híbrida. Conectar Radboud.',links:[{l:'Google Meet defesa',u:'https://meet.google.com'}],files:[]},
+  {id:4,cat:'Reuniões',name:'Reunião pedagógica UNEMAT Campus Cáceres',status:'agendado',urgency:'media',data:'2026-04-22',obs:'PPC, horários, projetos.',links:[{l:'Link Google Meet',u:'https://meet.google.com'}],files:[]},
+  {id:5,cat:'Eventos',name:'XX Congresso Brasileiro de Limnologia — UFJF',status:'agendado',urgency:'alta',data:'2026-07-15',obs:'Mesa redonda: Pantanal passado do pretérito.',links:[{l:'Site CBL 2026',u:'https://sbl.org.br'}],files:[]},
+  {id:6,cat:'Comissões',name:'Comissão avaliação projetos extensão UNEMAT',status:'realizado',urgency:'baixa',data:'2026-03-05',obs:'4 projetos avaliados.',links:[],files:[]},
+  {id:7,cat:'Palestras',name:'Palestra — Biogeoquímica do carbono Pantanal (PPGCA)',status:'agendado',urgency:'media',data:'2026-05-20',obs:'1h. Mestrandos e docentes.',links:[],files:[]},
+  {id:8,cat:'Outras',name:'Correção artigo revista Freshwater Biology',status:'pendente',urgency:'media',data:'2026-04-30',obs:'Revisão de dados da Tabela 3.',links:[],files:[]},
+];
+const DOCS_P=[{i:'🪪',n:'RG',v:'••• 456 789'},{i:'📋',n:'CPF',v:'•••.•••.789-00'},{i:'✈️',n:'Passaporte',v:'BR •••••01'},{i:'🚗',n:'CNH',v:'Cat. AB — venc. 2027'},{i:'🎓',n:'Diploma Doutor',v:'Radboud Univ. 2020'},{i:'🏛️',n:'SIAPE',v:'••••••7'}];
+let FAM=[{n:'Dona Elza',r:'Sogra',t:'(65) 9 ••••-••••',i:'👵'},{n:'Dona Sueli',r:'Mãe',t:'(65) 9 ••••-••••',i:'👩'},{n:'Pai',r:'Pai',t:'(65) 9 ••••-••••',i:'👨'}];
+let SAU=[{i:'🩺',n:'Check-up geral',d:'2025-08-10',o:'Resultados normais'},{i:'🩸',n:'Hemograma',d:'2025-08-10',o:'Hb 14.2 — ok'},{i:'🦷',n:'Dentista',d:'2025-06-05',o:'Limpeza. Retorno 6 meses'}];
+const FIN={r:[{n:'UNEMAT salário',v:12000},{n:'UNESCO consultoria',v:4500}],d:[{n:'Financiamento carro',v:1200},{n:'Plano saúde',v:680},{n:'Internet/cel',v:220}]};
+const WEEK=[{t:'Submeter artigo PM2.5 → Atmospheric Environment',d:false},{t:'Entregar Produto 4 UNESCO (curso EaD)',d:false},{t:'Atualizar plataforma BRASA',d:true}];
+
+let cF=null,cC='Todos',cAI=null,cPI=null,cPS='info',cPM='notas',cGF=null,cGI=null,cGS='notas',cAACat='Todos';
+let eId=null,mCtx=null,nId=700,nAAId=300;
+let calY=new Date().getFullYear(),calM=new Date().getMonth();
+const D=new Date();
+const $=id=>document.getElementById(id);
+const DY=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MNL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MNS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+$('dEl').textContent=DY[D.getDay()]+', '+D.getDate()+' '+MNS[D.getMonth()]+' '+D.getFullYear();
+
+let PERFIL={nome:'',avatar:'m1',photo:null,curso:'PROFÁGUA — Recursos Hídricos',inst:'UNEMAT — Campus Cáceres, Jane Vanini',lattes:'http://lattes.cnpq.br/',orcid:'',bio:'',anim:true};
+
+function show(id){document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));$(id).classList.add('on');}
+function setCC(c){document.documentElement.style.setProperty('--cc',c||'#1C1C2E');}
+function toast(m){const t=$('tst');t.textContent=m;t.classList.add('sh');setTimeout(()=>t.classList.remove('sh'),2500);}
+function fmtR(n){return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2});}
+function fI(n){const e=(n.split('.').pop()||'').toLowerCase();return({pdf:'📄',docx:'📝',doc:'📝',xlsx:'📊',xls:'📊',csv:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',r:'💻',py:'💻',pptx:'📑',zip:'🗜️',mp4:'🎥',mp3:'🎵'})[e]||'📎';}
+function fSz(b){return b>1e6?(b/1e6).toFixed(1)+' MB':b>1e3?(b/1e3).toFixed(0)+' KB':b+' B';}
+function dSt(v){if(!v)return 'ok';const t=new Date().toISOString().slice(0,10);return v<t?'over':v<=new Date(Date.now()+15*86400000).toISOString().slice(0,10)?'warn':'ok';}
+function resetData(){Object.keys(DATA).forEach(k=>DATA[k]=[]);DATA_AA=[];WEEK=[];}
+
+// ════════════ HOME ════════════
+function goHome(){setCC('#8E24AA');show('sh');renderHome();scheduleSync();}
+function renderHome(){
+  const mot=MOTS[D.getDate()%MOTS.length];
+  const wH=WEEK.map((w,i)=>`<div class="wr0"><div class="wck ${w.d?'on':''}" onclick="tw(${i})">${w.d?'✓':''}</div><span class="wtx ${w.d?'dn':''}">${w.t}</span><button class="ac dl" onclick="delWeek(${i})" style="flex-shrink:0">✕</button></div>`).join('')+
+    `<div class="wr0"><span class="wad" onclick="openModal('weekadd',null,null)">＋ meta</span></div>`;
+  const grid=[
+    {k:'art',e:'📄',l:'ART',c:'var(--art)',n:DATA.art.length},
+    {k:'proj',e:'🔬',l:'PROJ',c:'var(--proj)',n:DATA.proj.length},
+    {k:'app',e:'⚡',l:'APPS',c:'var(--app)',n:DATA.app.length},
+    {k:'aa',e:'📋',l:'AA',c:'var(--aa)',n:DATA_AA.filter(i=>i.status!=='realizado').length},
+    {k:'agenda',e:'📅',l:'AGENDA',c:'var(--ag)',n:''},
+  ];
+  const bH=grid.map(b=>{const oc=b.k==='aa'?'openAA()':b.k==='agenda'?'openAgenda()':"openList('"+b.k+"')";return `<div class="ib" style="--c:${b.c}" onclick="${oc}">${b.n!==''?'<span class="ic">'+b.n+'</span>':''}<span class="em">${b.e}</span><span class="il">${b.l}</span></div>`;}).join('');
+  const aA=DATA.art.filter(i=>i.urgency==='alta').length;
+  const aP=DATA.app.filter(i=>i.status==='publicado').length;
+  const aBom=DATA_AA.filter(i=>i.urgency==='alta'&&i.status!=='realizado').length;
+  const userName = currentUser?.displayName?.split(' ')[0] || 'Olá';
+  $('sh').innerHTML=`<div class="wr">
+    <div class="mcard"><div class="mll">💡 Mensagem do dia</div><div class="mtt">${mot.t}</div><div class="maa">${mot.a}</div></div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:10px;font-weight:600">Bem-vindo, ${userName}! ${FIREBASE_MODE?'☁️ Firebase ativo':'💾 Modo demo'}</div>
+    <div class="wcrd"><div class="slb"><span class="pls"></span>FECHAMENTOS DA SEMANA</div>${wH}</div>
+    <div class="igr">${bH}</div>
+    <div class="sr">
+      <div class="sm"><div class="sn" style="color:var(--art)">${aA}</div><div class="sl">artigos urgentes</div></div>
+      <div class="sm"><div class="sn" style="color:var(--aa)">${aBom}</div><div class="sl">AA pendentes</div></div>
+      <div class="sm"><div class="sn" style="color:var(--app)">${aP}</div><div class="sl">apps live</div></div>
+    </div></div>`;
+}
+function tw(i){WEEK[i].d=!WEEK[i].d;renderHome();scheduleSync();}
+function delWeek(i){WEEK.splice(i,1);renderHome();scheduleSync();}
+
+// ════════════ LIST ════════════
+function openList(k){cF=k;cC='Todos';setCC(FR[k]?FR[k].c:'#607D8B');show('sl');renderList();}
+function renderList(){
+  const f=FR[cF];const items=DATA[cF]||[];
+  const avg=items.length?Math.round(items.reduce((s,i)=>s+i.pct,0)/items.length):0;
+  const cats=f.cats.map(c=>`<div class="cp ${c===cC?'on':''}" onclick="setC('${c}')">${c}</div>`).join('');
+  let list=[...items].filter(i=>cC==='Todos'||i.cat===cC).sort((a,b)=>UO[a.urgency]-UO[b.urgency]);
+  const html=list.length?list.map((it,idx)=>{const oc2=cF==='art'?'openArtDetail('+it.id+')':cF==='proj'?'openProjDetail('+it.id+')':"openGenDetail('"+cF+"',"+it.id+')';return `<div class="ic0" style="animation-delay:${idx*.03}s" onclick="${oc2}">
+    <div class="it0"><span class="in0"><span class="ug ${it.urgency==='alta'?'ua':it.urgency==='media'?'um':'ub'}"></span>${it.name}</span>
+    <div class="ia0" onclick="event.stopPropagation()"><button class="ac" onclick="openModal('edit',${it.id},null)">✏️</button><button class="ac dl" onclick="delItem(${it.id})">🗑️</button></div></div>
+    <div class="im"><span class="st ${SC_MAP[it.status]||''}">${SL[it.status]||it.status}</span>
+      ${it.journal?`<span class="mt">📖 ${it.journal.slice(0,26)}</span>`:''}${it.local?`<span class="mt">📍 ${it.local}</span>`:''}
+      ${it.tech?`<span class="mt">💻 ${it.tech}</span>`:''}${it.financiador?`<span class="mt">💰 ${it.financiador}</span>`:''}
+      ${it.vigencia?`<span class="mt">📅 ${it.vigencia}</span>`:''}${it.files&&it.files.length?`<span class="mt">📁 ${it.files.length}</span>`:''}
+      <span class="mt">${it.cat}</span></div>
+    <div class="pr"><div class="pb"><div class="pf" style="width:${it.pct}%"></div></div><span class="pp">${it.pct}%</span></div>
+  </div>`;}).join(''):`<div class="es"><div class="ei">📭</div><p>Nenhum item aqui.</p></div>`;
+  $('sl').innerHTML=`<div class="wr"><div class="fhd"><button class="bk" onclick="goHome()">←</button>
+    <div><div class="ftt">${f.e} ${f.n}</div><div class="fsb">${items.length} itens · ${avg}% concluído</div></div></div>
+    <div class="cpl">${cats}</div><div class="il0">${html}</div>
+    <div class="ar" onclick="openModal('new',null,'${cF}')"><span>＋</span> Adicionar item</div></div>`;
+}
+function setC(c){cC=c;renderList();}
+function delItem(id){if(!confirm('Excluir?'))return;DATA[cF]=DATA[cF].filter(i=>i.id!==id);renderList();scheduleSync();toast('Excluído');}
+
+// ════════════ ARTICLE DETAIL ════════════
+function openArtDetail(id){cAI=id;cPS='info';setCC(FR.art.c);show('sad');renderArtDetail();}
+function renderArtDetail(){
+  const it=DATA.art.find(i=>i.id===cAI);if(!it)return;
+  const tabs=[{k:'info',l:'ℹ️ Info'},{k:'notas',l:'📝 Notas'},{k:'arquivos',l:'📁 Arquivos'},{k:'autores',l:'👥 Autores'},{k:'datas',l:'🔔 Alertas'},{k:'progresso',l:'📊 Progresso'}];
+  const tH=tabs.map(t=>`<div class="tab ${t.k===cPS?'on':''}" onclick="setPS('${t.k}')">${t.l}</div>`).join('');
+  $('sad').innerHTML=`<div class="art-wrap">
+    <div class="art-hero">
+      <div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:10px">
+        <button class="bk" onclick="openList('art')">←</button>
+        <div style="flex:1"><div class="art-title">${it.name}</div>
+          <div class="art-meta"><span class="st ${SC_MAP[it.status]||''}">${SL[it.status]||it.status}</span>
+            ${it.journal?`<span class="mt">📖 ${it.journal}</span>`:''}${it.impact?`<span class="mt">IF: ${it.impact}</span>`:''}
+            <span class="mt">${it.cat}</span></div>
+          <div class="art-prow"><div class="art-pbar"><div class="art-pfill" style="width:${it.pct}%"></div></div>
+            <span class="pp">${it.pct}%</span><button class="ac" onclick="openModal('edit',${it.id},null)">✏️</button></div>
+        </div></div></div>
+    <div class="tabs">${tH}</div>
+    <div id="aSP">${renderArtPanel(it)}</div>
+  </div>`;
+}
+function setPS(k){cPS=k;renderArtDetail();}
+function renderArtPanel(it){
+  if(cPS==='info') return `<div class="card">
+    <div class="fl">Periódico</div><div style="font-size:.9rem;font-weight:700;margin-top:5px;color:var(--cc)">${it.journal||'—'}</div>
+    ${it.impact?`<div style="font-size:.7rem;color:var(--mu);margin-top:3px">IF: ${it.impact}</div>`:''}
+    <div class="fl">Coautores</div><div style="font-size:.83rem;margin-top:5px">${it.coautores||'Apenas eu'}</div>
+    ${it.doi?`<div class="fl">DOI</div><div style="font-size:.8rem;font-family:var(--fm);margin-top:5px;word-break:break-all"><a href="https://doi.org/${it.doi}" target="_blank" class="link-tag">🔗 ${it.doi}</a></div>`:''}
+    ${it.keywords?`<div class="fl">Palavras-chave</div><div style="font-size:.8rem;margin-top:5px;color:var(--mu)">${it.keywords}</div>`:''}
+    ${it.abstract?`<div class="fl">Abstract</div><div style="font-size:.8rem;line-height:1.55;margin-top:5px">${it.abstract}</div>`:''}
+    </div><div class="ar" onclick="openModal('artinfo',${it.id},null)" style="margin-top:0">✏️ Editar informações</div>`;
+  if(cPS==='notas') return `<textarea class="na" id="na" placeholder="Notas, ideias...">${it.notes||''}</textarea><button class="sb" onclick="sNA(${it.id})">💾 Salvar</button>`;
+  if(cPS==='arquivos') return renderFilesPanel('art',it,'renderArtDetail');
+  if(cPS==='autores') return renderTeamPanel('art',it,'renderArtDetail');
+  if(cPS==='datas') return renderDatesPanel('art',it,'renderArtDetail');
+  if(cPS==='progresso') return renderProgPanel('art',it);
+  return '';
+}
+
+// ════════════ PROJECT DETAIL ════════════
+const PROJ_MENU=[
+  {k:'notas',e:'📝',l:'Notas'},{k:'metas',e:'🎯',l:'Metas'},{k:'equipe',e:'👥',l:'Equipe'},
+  {k:'cronograma',e:'📅',l:'Crono'},{k:'orcamento',e:'💰',l:'Orçamento'},
+  {k:'alunos',e:'🎓',l:'Alunos'},{k:'bancas',e:'🏛️',l:'Bancas'},
+  {k:'produtos',e:'📦',l:'Produtos'},{k:'coletas',e:'🌿',l:'Coletas'},
+  {k:'relatorios',e:'📋',l:'Relatórios'},{k:'arquivos',e:'📁',l:'Arquivos'},{k:'datas',e:'🔔',l:'Alertas'},
+];
+function openProjDetail(id){cPI=id;cPM='notas';setCC(FR.proj.c);show('spd');renderProjDetail();}
+function renderProjDetail(){
+  const it=DATA.proj.find(i=>i.id===cPI);if(!it)return;
+  const mH=PROJ_MENU.map(m=>`<div class="pm ${m.k===cPM?'on':''}" onclick="setPM('${m.k}')" title="${m.l}">${m.e}<span>${m.l}</span></div>`).join('');
+  $('spd').innerHTML=`<div class="wr">
+    <div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:12px">
+      <button class="bk" onclick="openList('proj')">←</button>
+      <div style="flex:1"><div style="font-size:1rem;font-weight:900;color:var(--cc);line-height:1.3;margin-bottom:5px">${it.name}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap"><span class="st ${SC_MAP[it.status]||''}">${SL[it.status]||it.status}</span>
+          ${it.financiador?`<span class="mt">💰 ${it.financiador}</span>`:''}${it.vigencia?`<span class="mt">📅 ${it.vigencia}</span>`:''}
+          ${it.portaria?`<span class="mt">🗂️ ${it.portaria.slice(0,28)}</span>`:''}
+        </div></div>
+      <button class="ac" onclick="openModal('edit',${it.id},null)">✏️</button>
+    </div>
+    <div class="proj-layout">
+      <div class="proj-menu">${mH}</div>
+      <div class="proj-content">${renderProjPanel(it)}</div>
+    </div></div>`;
+}
+function setPM(k){cPM=k;renderProjDetail();}
+function renderProjPanel(it){
+  if(cPM==='notas') return `<textarea class="na" id="na" placeholder="Notas...">${it.notes||''}</textarea><button class="sb" onclick="sNP(${it.id})">💾 Salvar</button>`;
+  if(cPM==='metas'){
+    const ms=(it.metas||[]).map((m,mi)=>`<div class="mi"><div class="mn">${m.name}</div><div class="mpr"><div class="mpb"><div class="mpf" style="width:${m.pct}%"></div></div><span class="mpc">${m.pct}%</span><input type="range" min="0" max="100" value="${m.pct}" style="width:60px;height:4px;margin:0 0 0 6px" oninput="updM(${it.id},${mi},this.value)"><button class="ac dl" onclick="delM(${it.id},${mi})" style="margin-left:3px">✕</button></div></div>`).join('');
+    const tot=it.metas&&it.metas.length?Math.round(it.metas.reduce((s,m)=>s+m.pct,0)/it.metas.length):it.pct;
+    return `<div class="pgd" style="margin-bottom:10px"><div class="pgb"><div class="pgn">${tot}%</div><div style="font-size:.65rem;color:var(--mu);font-weight:600">progresso geral</div><div class="pgbr"><div class="pgfr" style="width:${tot}%"></div></div></div></div>
+      <div class="sti">Metas <span class="ia" onclick="openModal('meta',${it.id},null)">＋</span></div>
+      <div class="ml0">${ms||'<div class="es"><div class="ei">🎯</div><p>Nenhuma meta.</p></div>'}</div>`;
+  }
+  if(cPM==='equipe') return renderTeamPanel('proj',it,'renderProjDetail');
+  if(cPM==='cronograma'){
+    const ms=it.metas||[];
+    if(!ms.length)return `<div class="es"><div class="ei">📅</div><p>Adicione metas para gerar o cronograma.</p></div>`;
+    const mn=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `<div class="gw"><div class="gn"><div class="gml">${mn.map(m=>`<span>${m}</span>`).join('')}</div>${ms.map(m=>{const l=Math.max(0,(100-m.pct)/2);return `<div class="gr"><div class="glb">${m.name.slice(0,18)}</div><div class="gtk"><div class="gbr" style="left:${l}%;width:${m.pct}%">${m.pct}%</div></div></div>`;}).join('')}</div></div>`;
+  }
+  if(cPM==='orcamento'){
+    const o=it.orcamento||[];const e0=o.filter(x=>x.tipo==='entrada').reduce((s,x)=>s+x.val,0);const s0=o.filter(x=>x.tipo==='saida').reduce((s,x)=>s+x.val,0);
+    const bH=o.map((x,oi)=>`<div class="bi"><div class="bin"><div class="bna">${x.nome}</div><div class="bca">${x.cat}</div></div><span class="bva ${x.tipo==='entrada'?'be':'bs'}">${x.tipo==='entrada'?'+':'-'}${fmtR(x.val)}</span><button class="ac dl" onclick="delO(${it.id},${oi})">🗑️</button></div>`).join('');
+    return `<div class="bsm"><div class="bsc"><div class="bsn" style="color:#2e7d32">${fmtR(e0)}</div><div class="bsl">entradas</div></div><div class="bsc"><div class="bsn" style="color:#c62828">${fmtR(s0)}</div><div class="bsl">saídas</div></div><div class="bsc"><div class="bsn" style="color:${e0-s0>=0?'#2e7d32':'#c62828'}">${fmtR(e0-s0)}</div><div class="bsl">saldo</div></div></div>
+      <div class="sti">Lançamentos <span class="ia" onclick="openModal('orc',${it.id},null)">＋</span></div>
+      <div class="bl0">${bH||'<div class="es"><div class="ei">💰</div><p>Nenhum lançamento.</p></div>'}</div>`;
+  }
+  if(cPM==='alunos'){
+    const al=(it.alunos||[]).map((a,ai)=>`<div class="alc"><div class="aln">🎓 ${a.nome}</div><div class="alt">${a.titulo}</div>
+      <div class="alm"><span class="mt">👨‍🏫 ${a.orientador}</span><span class="mt">📅 ${a.previsao}</span>
+        <span class="st ${a.status==='defesa agendada'?'s-sub':a.status==='qualificação'?'s-rev':a.status==='em andamento'?'s-and':'s-con'}">${a.status}</span></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:5px"><button class="ac dl" onclick="delAl(${it.id},${ai})">🗑️</button></div></div>`).join('');
+    return `<div class="sti">Alunos / Dissertações <span class="ia" onclick="openModal('aluno',${it.id},null)">＋</span></div><div class="all">${al||'<div class="es"><div class="ei">🎓</div><p>Nenhum aluno.</p></div>'}</div>`;
+  }
+  if(cPM==='bancas'){
+    const bc=(it.bancas||[]).map((b,bi)=>`<div class="bcc"><span class="bci">${b.tipo==='Defesa'||b.tipo==='Defesa Cotutela'?'🎓':'📋'}</span>
+      <div style="flex:1"><div class="bcn">${b.tipo} — ${b.aluno}</div><div class="bcm">${b.titulo}</div>
+        <div class="bcm" style="margin-top:3px">📅 ${b.data} · <span class="st ${b.status==='agendada'?'s-rev':b.status==='realizada'?'s-pub':'s-plan'}">${b.status}</span></div></div>
+      <button class="ac dl" onclick="delBc(${it.id},${bi})">🗑️</button></div>`).join('');
+    return `<div class="sti">Bancas <span class="ia" onclick="openModal('banca',${it.id},null)">＋</span></div><div class="bcl">${bc||'<div class="es"><div class="ei">🏛️</div><p>Nenhuma banca.</p></div>'}</div>`;
+  }
+  if(cPM==='produtos'){
+    const ps=(it.produtos||[]).map((p,pi)=>`<div class="pi"><span class="pic">${PI[p.tipo]||'📌'}</span><div style="flex:1"><div class="pin">${p.nome}</div><div class="pit">${p.tipo} · ${p.status}</div></div><button class="ac dl" onclick="delPr(${it.id},${pi})">🗑️</button></div>`).join('');
+    return `<div class="sti">Produtos <span class="ia" onclick="openModal('prod',${it.id},null)">＋</span></div><div class="pl0">${ps||'<div class="es"><div class="ei">📦</div><p>Nenhum produto.</p></div>'}</div>`;
+  }
+  if(cPM==='coletas'){
+    const cs=(it.coletas||[]).map((c,ci)=>`<div class="ci"><div class="cn">${c.nome}</div><div class="cm"><span class="mt">📍 ${c.local}</span><span class="mt">📅 ${c.data}</span><span class="st ${c.status==='realizada'?'s-pub':c.status==='agendada'?'s-plan':'s-rev'}">${c.status}</span></div>${c.obs?`<div style="font-size:.69rem;color:var(--mu);margin-top:5px">${c.obs}</div>`:''}<div style="display:flex;justify-content:flex-end;margin-top:5px"><button class="ac dl" onclick="delCo(${it.id},${ci})">🗑️</button></div></div>`).join('');
+    return `<div class="sti">Coletas de campo <span class="ia" onclick="openModal('coleta',${it.id},null)">＋</span></div><div class="cl0">${cs||'<div class="es"><div class="ei">🌿</div><p>Nenhuma coleta.</p></div>'}</div>`;
+  }
+  if(cPM==='relatorios'){
+    const rs=(it.relatorios||[]).map((r,ri)=>`<div class="rlc"><div style="flex:1"><div class="rln">${r.nome}</div><div class="rlm">📅 ${r.data}${r.obs?' · '+r.obs:''}</div></div><span class="st ${r.status==='entregue'?'s-pub':r.status==='aprovado'?'s-con':'s-plan'}">${r.status}</span><button class="ac dl" onclick="delRl(${it.id},${ri})" style="margin-left:5px">🗑️</button></div>`).join('');
+    return `<div class="sti">Relatórios <span class="ia" onclick="openModal('relatorio',${it.id},null)">＋</span></div><div class="rll">${rs||'<div class="es"><div class="ei">📋</div><p>Nenhum relatório.</p></div>'}</div>`;
+  }
+  if(cPM==='arquivos') return renderFilesPanel('proj',it,'renderProjDetail');
+  if(cPM==='datas') return renderDatesPanel('proj',it,'renderProjDetail');
+  return '';
+}
+
+// ════════════ GENERIC DETAIL ════════════
+function openGenDetail(fk,id){cGF=fk;cGI=id;cGS='notas';setCC(FR[fk]?FR[fk].c:'#607D8B');show('sgd');renderGenDetail();}
+function renderGenDetail(){
+  const f=FR[cGF];const it=(DATA[cGF]||[]).find(i=>i.id===cGI);if(!it)return;
+  const tabs=[{k:'notas',l:'📝 Notas'},{k:'arquivos',l:'📁 Arquivos'},{k:'equipe',l:'👥 Equipe'},{k:'datas',l:'🔔 Alertas'},{k:'progresso',l:'📊 Progresso'}];
+  const tH=tabs.map(t=>`<div class="tab ${t.k===cGS?'on':''}" onclick="setGS('${t.k}')">${t.l}</div>`).join('');
+  $('sgd').innerHTML=`<div class="art-wrap">
+    <div class="art-hero">
+      <div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:8px">
+        <button class="bk" onclick="openList('${cGF}')">←</button>
+        <div style="flex:1"><div class="art-title">${it.name}</div>
+          <div class="art-meta"><span class="st ${SC_MAP[it.status]||''}">${SL[it.status]||it.status}</span>
+            ${it.tech?`<span class="mt">💻 ${it.tech}</span>`:''}${it.url?`<a href="${it.url}" target="_blank" class="link-tag">🔗 Acessar</a>`:''}
+            <span class="mt">${it.cat}</span></div>
+          <div class="art-prow"><div class="art-pbar"><div class="art-pfill" style="width:${it.pct}%"></div></div>
+            <span class="pp">${it.pct}%</span><button class="ac" onclick="openModal('edit',${it.id},null)">✏️</button></div>
+        </div></div></div>
+    <div class="tabs">${tH}</div>
+    <div>${renderGenPanel(it,f)}</div>
+  </div>`;
+}
+function setGS(k){cGS=k;renderGenDetail();}
+function renderGenPanel(it,f){
+  if(cGS==='notas') return `<textarea class="na" id="na" placeholder="Notas...">${it.notes||''}</textarea><button class="sb" onclick="sNG()">💾 Salvar</button>`;
+  if(cGS==='arquivos') return renderFilesPanel(cGF,it,'renderGenDetail');
+  if(cGS==='equipe') return renderTeamPanel(cGF,it,'renderGenDetail');
+  if(cGS==='datas') return renderDatesPanel(cGF,it,'renderGenDetail');
+  if(cGS==='progresso') return renderProgPanel(cGF,it);
+  return '';
+}
+
+// ════════════ SHARED RENDERS ════════════
+function renderFilesPanel(fk,it,rfn){
+  const fl=(it.files||[]).map((x,fi)=>`<div class="fi0">
+    <span class="fic">${fI(x.name)}</span>
+    <div style="flex:1">
+      <div class="fna">${x.name}</div>
+      <div class="fsz">${x.size}${x.demo?' · local demo':x.url?' · ☁️ nuvem':''}</div>
+    </div>
+    <div style="display:flex;gap:3px">
+      ${x.url?`<button class="ac" onclick="window.open('${x.url}','_blank')" title="Download">⬇️</button>`:`<button class="ac" onclick="toast('${FIREBASE_MODE?'URL não disponível':'Firebase necessário para download'}')" title="Download">⬇️</button>`}
+      <button class="ac" onclick="renFile('${fk}',${it.id},${fi},'${rfn}')" title="Renomear">✏️</button>
+      <button class="ac dl" onclick="rmFile('${fk}',${it.id},${fi},'${rfn}')" title="Excluir">🗑️</button>
+    </div></div>`).join('');
+  return `<div class="fl0">${fl||'<div class="es"><div class="ei">📂</div><p>Nenhum arquivo.</p></div>'}</div>
+    <div class="uz"><input type="file" multiple onchange="hUp(event,'${fk}',${it.id},'${rfn}')">
+      <div style="font-size:1.5rem;margin-bottom:5px">☁️</div>
+      <div style="font-size:.79rem;font-weight:700">${FIREBASE_MODE?'Upload para Firebase Storage':'Adicionar arquivo (modo demo)'}</div>
+      <div style="font-size:.64rem;color:var(--mu);margin-top:3px">${FIREBASE_MODE?'Arquivos salvos na nuvem com segurança':'Configure o Firebase para salvar arquivos na nuvem'}</div>
+    </div>`;
+}
+function renderTeamPanel(fk,it,rfn){
+  const tH=(it.team||[]).map((m,ti)=>{const p=m.split(' — ');const nm=p[0];const rl=p[1]||'membro';const rc=Object.entries(RC).find(([k])=>rl.toLowerCase().includes(k))?.[1]||'#607D8B';
+    return `<div class="ti"><div class="ta" style="background:${rc}">${nm.charAt(0)}</div><div style="flex:1"><div class="tn">${nm}</div><div class="tr">${rl}</div></div><button class="ac dl" onclick="delTeam('${fk}',${it.id},${ti},'${rfn}')">✕</button></div>`;}).join('');
+  return `<div class="tl">${tH||'<div class="es"><div class="ei">👥</div><p>Nenhum membro.</p></div>'}</div>
+    <div class="fl">Adicionar membro</div>
+    <div style="display:flex;gap:7px;margin-top:6px"><input class="fi" id="nMm" placeholder="Nome — papel" style="flex:1;margin-top:0"><button class="sb" style="margin-top:0;white-space:nowrap" onclick="addTeam('${fk}',${it.id},'${rfn}')">＋</button></div>`;
+}
+function renderDatesPanel(fk,it,rfn){
+  const dH=(it.dates||[]).map((d,di)=>`<div class="di"><span style="font-size:1.1rem">${d.s==='over'?'🔴':d.s==='warn'?'🟡':'🟢'}</span>
+    <div class="dif"><div class="dlb">${d.l}</div><div class="dva">${d.v}</div></div>
+    <span class="db ${d.s==='over'?'dov':d.s==='warn'?'dwa':'dok'}">${d.s==='over'?'Vencido':d.s==='warn'?'Próximo':'OK'}</span>
+    <button class="ac dl" onclick="delDate('${fk}',${it.id},${di},'${rfn}')" style="margin-left:3px">✕</button></div>`).join('');
+  return `<div class="dl">${dH||'<div class="es"><div class="ei">🔔</div><p>Nenhum alerta.</p></div>'}</div>
+    <label class="fl">Adicionar prazo</label>
+    <input class="fi" id="dL0" placeholder="Descrição (ex: Submissão artigo)">
+    <input class="fi" id="dV0" type="date" style="margin-top:7px">
+    <button class="sb" onclick="addDate('${fk}',${it.id},'${rfn}')">＋ Adicionar</button>`;
+}
+function renderProgPanel(fk,it){
+  return `<div class="pgd"><div class="pgb"><div class="pgn">${it.pct}%</div><div style="font-size:.67rem;color:var(--mu);font-weight:600">concluído</div>
+    <div class="pgbr"><div class="pgfr" id="pgF" style="width:${it.pct}%"></div></div></div>
+    <label class="fl">Ajustar</label><input type="range" min="0" max="100" value="${it.pct}" oninput="updProg('${fk}',${it.id},this.value)">
+    <label class="fl">Status</label><select class="fi" style="margin-top:6px" onchange="updStat('${fk}',${it.id},this.value)">
+      ${(FR[fk]?FR[fk].st:[]).map(s=>`<option value="${s}" ${s===it.status?'selected':''}>${SL[s]||s}</option>`).join('')}</select></div>`;
+}
+
+// ════════════ SHARED ACTIONS ════════════
+function sNA(id){const it=DATA.art.find(i=>i.id===id);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
+function sNP(id){const it=DATA.proj.find(i=>i.id===id);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
+function sNG(){const it=(DATA[cGF]||[]).find(i=>i.id===cGI);if(it)it.notes=$('na').value;scheduleSync();toast('Salvo ✓');}
+
+// FILE ACTIONS with real Firebase Storage
+async function hUp(ev,fk,id,rfn){
+  const files=Array.from(ev.target.files);
+  const it=(DATA[fk]||[]).find(i=>i.id===id);
+  if(!it){toast('Item não encontrado');return;}
+  for(const file of files){
+    await uploadFileToStorage(file, fk, id, (fileObj)=>{
+      it.files.push(fileObj);
+      scheduleSync();
+    });
+  }
+  toast(files.length+' arquivo(s) adicionado(s)');
+  window[rfn]&&window[rfn]();
+}
+async function rmFile(fk,id,fi,rfn){
+  if(!confirm('Excluir arquivo?'))return;
+  const it=(DATA[fk]||[]).find(i=>i.id===id);
+  if(!it)return;
+  const f=it.files[fi];
+  if(f&&f.path) await deleteFileFromStorage(f.path);
+  it.files.splice(fi,1);
+  scheduleSync();
+  window[rfn]&&window[rfn]();
+  toast('Arquivo excluído');
+}
+function renFile(fk,id,fi,rfn){
+  const it=(DATA[fk]||[]).find(i=>i.id===id);
+  if(!it)return;
+  const nn=prompt('Novo nome:',it.files[fi].name);
+  if(nn){it.files[fi].name=nn;scheduleSync();window[rfn]&&window[rfn]();}
+}
+
+function addTeam(fk,id,rfn){const m=$('nMm').value.trim();if(!m)return;const it=(DATA[fk]||[]).find(i=>i.id===id);it.team.push(m);scheduleSync();window[rfn]&&window[rfn]();toast('Adicionado');}
+function delTeam(fk,id,ti,rfn){const it=(DATA[fk]||[]).find(i=>i.id===id);it.team.splice(ti,1);scheduleSync();window[rfn]&&window[rfn]();}
+function addDate(fk,id,rfn){const l=$('dL0').value.trim(),v=$('dV0').value;if(!l||!v)return;const it=(DATA[fk]||[]).find(i=>i.id===id);it.dates.push({l,v,s:dSt(v)});scheduleSync();window[rfn]&&window[rfn]();toast('Alerta adicionado');}
+function delDate(fk,id,di,rfn){const it=(DATA[fk]||[]).find(i=>i.id===id);it.dates.splice(di,1);scheduleSync();window[rfn]&&window[rfn]();}
+function updProg(fk,id,v){const it=(DATA[fk]||[]).find(i=>i.id===id);if(it)it.pct=parseInt(v);const n=document.querySelector('.pgn');const f=$('pgF');if(n)n.textContent=v+'%';if(f)f.style.width=v+'%';scheduleSync();}
+function updStat(fk,id,v){const it=(DATA[fk]||[]).find(i=>i.id===id);if(it)it.status=v;scheduleSync();toast('Status atualizado');}
+function updM(id,mi,v){const it=DATA.proj.find(i=>i.id===id);if(!it||!it.metas)return;it.metas[mi].pct=parseInt(v);const pf=document.querySelectorAll('.mpf')[mi];const pp=document.querySelectorAll('.mpc')[mi];if(pf)pf.style.width=v+'%';if(pp)pp.textContent=v+'%';scheduleSync();}
+function delM(id,mi){DATA.proj.find(i=>i.id===id).metas.splice(mi,1);renderProjDetail();scheduleSync();}
+function delO(id,oi){DATA.proj.find(i=>i.id===id).orcamento.splice(oi,1);renderProjDetail();scheduleSync();}
+function delPr(id,pi){DATA.proj.find(i=>i.id===id).produtos.splice(pi,1);renderProjDetail();scheduleSync();}
+function delCo(id,ci){DATA.proj.find(i=>i.id===id).coletas.splice(ci,1);renderProjDetail();scheduleSync();}
+function delAl(id,ai){DATA.proj.find(i=>i.id===id).alunos.splice(ai,1);renderProjDetail();scheduleSync();}
+function delBc(id,bi){DATA.proj.find(i=>i.id===id).bancas.splice(bi,1);renderProjDetail();scheduleSync();}
+function delRl(id,ri){DATA.proj.find(i=>i.id===id).relatorios.splice(ri,1);renderProjDetail();scheduleSync();}
+
+// ════════════ AA ════════════
+
+function renderAAFiles(it){
+  if(!it.files||!it.files.length)return '';
+  var html='<div class="fl0" style="margin-top:8px">';
+  it.files.forEach(function(x,fi){
+    html+='<div class="fi0">';
+    html+='<span class="fic">'+fI(x.name)+'</span>';
+    html+='<div style="flex:1"><div class="fna">'+x.name+'</div><div class="fsz">'+x.size+'</div></div>';
+    html+='<div style="display:flex;gap:3px">';
+    if(x.url){html+='<button class="ac" onclick="window.open(this.dataset.u,\'_blank\')" data-u="'+x.url+'">⬇️</button>';}
+    else{html+='<button class="ac" onclick="toast(\'Firebase p/ download\')">⬇️</button>';}
+    html+='<button class="ac dl" onclick="rmAAFile('+it.id+','+fi+')">🗑️</button>';
+    html+='</div></div>';
+  });
+  html+='</div>';
+  return html;
+}
+function openAA(){setCC('#00897B');show('saa');renderAA();}
+function renderAA(){
+  const cats=AA_CATS.map(c=>`<div class="cp ${c===cAACat?'on':''}" onclick="setAACat('${c}')">${c}</div>`).join('');
+  let list=[...DATA_AA].filter(i=>cAACat==='Todos'||i.cat===cAACat).sort((a,b)=>UO[a.urgency]-UO[b.urgency]);
+  const hoje=new Date().toISOString().slice(0,10);
+  const prox=DATA_AA.filter(i=>i.data&&i.data>=hoje&&i.status!=='realizado').sort((a,b)=>a.data.localeCompare(b.data))[0];
+  const alerta=prox?`<div style="background:linear-gradient(135deg,#00897B,#43A047);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;color:#fff"><span style="font-size:1.2rem">🔔</span><div><div style="font-size:.78rem;font-weight:800">Próxima atividade</div><div style="font-size:.73rem;opacity:.9">${prox.name.slice(0,50)}</div><div style="font-size:.63rem;opacity:.75;font-family:var(--fm)">${prox.data}</div></div></div>`:'';
+  const tot=DATA_AA.length,ok=DATA_AA.filter(i=>i.status==='realizado').length;
+  const html=list.map((it,idx)=>`<div class="bom-card" style="animation:fi .2s both;animation-delay:${idx*.03}s;margin-bottom:8px">
+    <div class="it0" style="margin-bottom:7px">
+      <span class="in0"><span class="ug ${it.urgency==='alta'?'ua':it.urgency==='media'?'um':'ub'}"></span>${it.name}</span>
+      <div class="ia0"><button class="ac" onclick="editAA(${it.id})">✏️</button><button class="ac dl" onclick="delAA(${it.id})">🗑️</button></div></div>
+    <div class="im">
+      <span class="st ${AA_SC[it.status]||''}">${AA_SL[it.status]||it.status}</span>
+      ${it.data?`<span class="mt">📅 ${it.data}</span>`:''}
+      <span class="mt">${it.cat}</span>
+      ${it.files&&it.files.length?`<span class="mt">📁 ${it.files.length}</span>`:''}
+    </div>
+    ${it.obs?`<div style="font-size:.7rem;color:var(--mu);margin-top:5px;line-height:1.4">${it.obs}</div>`:''}
+    ${(it.links||[]).length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${it.links.map(lk=>`<a href="${lk.u}" target="_blank" class="link-tag">🔗 ${lk.l}</a>`).join('')}</div>`:''}
+    ${renderAAFiles(it)}
+    <div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">
+      <button class="sb" style="font-size:.68rem;padding:5px 12px;background:${it.status==='realizado'?'#9e9e9e':'#00897B'}" onclick="markAA(${it.id},'${it.status==='realizado'?'agendado':'realizado'}')">${it.status==='realizado'?'↩ Desfazer':'✓ Realizado'}</button>
+      <div class="uz" style="flex:1;padding:6px 10px;border-radius:8px;min-width:120px"><input type="file" multiple onchange="hUpAA(event,${it.id})"><span style="font-size:.7rem;font-weight:700">📎 Anexar</span></div>
+    </div>
+  </div>`).join('')||`<div class="es"><div class="ei">📋</div><p>Nenhuma atividade aqui.</p></div>`;
+  $('saa').innerHTML=`<div class="wr">
+    <div class="fhd"><button class="bk" onclick="goHome()">←</button>
+      <div><div class="ftt" style="color:#00897B">📋 AA — Adicionais Acadêmicos</div>
+        <div class="fsb">${ok}/${tot} realizadas</div></div></div>
+    ${alerta}<div class="cpl">${cats}</div>
+    <div>${html}</div>
+    <div class="ar" style="--cc:#00897B" onclick="openModal('aa',null,null)"><span>＋</span> Adicionar atividade</div>
+  </div>`;
+}
+function setAACat(c){cAACat=c;renderAA();}
+function delAA(id){if(!confirm('Excluir?'))return;DATA_AA=DATA_AA.filter(i=>i.id!==id);renderAA();scheduleSync();toast('Excluído');}
+function editAA(id){openModal('aa',id,null);}
+function markAA(id,s){const it=DATA_AA.find(i=>i.id===id);if(it)it.status=s;renderAA();scheduleSync();toast(s==='realizado'?'✓ Realizado!':'Desmarcado');}
+async function hUpAA(ev,id){
+  const it=DATA_AA.find(i=>i.id===id);
+  if(!it.files)it.files=[];
+  for(const file of Array.from(ev.target.files)){
+    await uploadFileToStorage(file,'aa',id,(f)=>{it.files.push(f);scheduleSync();});
+  }
+  renderAA();toast('Adicionado');
+}
+async function rmAAFile(id,fi){
+  if(!confirm('Excluir arquivo?'))return;
+  const it=DATA_AA.find(i=>i.id===id);
+  const f=it.files[fi];
+  if(f&&f.path)await deleteFileFromStorage(f.path);
+  it.files.splice(fi,1);scheduleSync();renderAA();toast('Removido');
+}
+
+// ════════════ AGENDA ════════════
+function getCalEvents(){
+  const evs={};
+  function addEv(date,label,desc,color,cat){if(!date)return;const d=date.slice(0,10);if(!evs[d])evs[d]=[];evs[d].push({label,desc,color,cat});}
+  DATA.art.forEach(it=>(it.dates||[]).forEach(dt=>addEv(dt.v,it.name,dt.l,CAL_COLORS.Artigos,'Artigos')));
+  DATA.proj.forEach(it=>{
+    (it.dates||[]).forEach(dt=>addEv(dt.v,it.name,dt.l,CAL_COLORS.Projetos,'Projetos'));
+    (it.coletas||[]).filter(c=>c.data).forEach(c=>addEv(c.data,c.nome,'Coleta de campo',CAL_COLORS.Coletas,'Coletas'));
+    (it.bancas||[]).filter(b=>b.data).forEach(b=>addEv(b.data,b.aluno,b.tipo,CAL_COLORS.Bancas,'Bancas'));
+    (it.relatorios||[]).filter(r=>r.data&&r.status!=='entregue').forEach(r=>addEv(r.data,r.nome,'Relatório',CAL_COLORS.Relatorios,'Relatórios'));
+  });
+  DATA_AA.forEach(it=>{if(it.data)addEv(it.data,it.name,it.cat,CAL_COLORS[it.cat.replace(/[^a-zA-Z]/g,'')]||CAL_COLORS.Outros,it.cat);});
+  return evs;
+}
+function openAgenda(){setCC('#8E24AA');show('sag');renderAgenda();}
+function renderAgenda(){
+  const mot=MOTS[(D.getDate()+3)%MOTS.length];
+  const evs=getCalEvents();
+  const fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate();
+  let ch=['D','S','T','Q','Q','S','S'].map(d=>`<div class="cd2">${d}</div>`).join('');
+  for(let i=0;i<fd;i++)ch+=`<div class="cd om"></div>`;
+  const hoje=new Date().toISOString().slice(0,10);
+  for(let d=1;d<=dim;d++){
+    const iT=d===D.getDate()&&calM===D.getMonth()&&calY===D.getFullYear();
+    const dStr=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const dayEvs=evs[dStr]||[];
+    const dotColors=[...new Set(dayEvs.map(e=>e.color))].slice(0,3);
+    const dots=dotColors.map(col=>`<span style="width:4px;height:4px;border-radius:50%;background:${col};display:inline-block;margin:0 1px"></span>`).join('');
+    ch+=`<div class="cd ${iT?'td':''}" onclick="selDay('${dStr}')" style="flex-direction:column;gap:1px">${d}${dots?`<div style="display:flex;justify-content:center">${dots}</div>`:''}</div>`;
+  }
+  const selD=window._selDay||(calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(D.getDate()).padStart(2,'0'));
+  const selEvs=evs[selD]||[];
+  const dayHtml=selEvs.length?selEvs.map(e=>`<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--bd)">
+    <div style="width:4px;min-height:30px;border-radius:2px;background:${e.color};flex-shrink:0;margin-top:3px"></div>
+    <div style="flex:1"><div style="font-size:.8rem;font-weight:700;line-height:1.3">${e.label.slice(0,55)}</div>
+      <div style="display:flex;gap:5px;margin-top:3px"><span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${e.color}20;color:${e.color}">${e.cat}</span>
+      <span style="font-size:.62rem;color:var(--mu)">${e.desc}</span></div></div></div>`).join(''):
+    `<div style="text-align:center;padding:16px;color:var(--mu);font-size:.78rem">Nenhum evento neste dia</div>`;
+  const allEvs=[];Object.entries(evs).forEach(([date,es])=>es.forEach(e=>allEvs.push({date,...e})));
+  allEvs.sort((a,b)=>a.date.localeCompare(b.date));
+  const futEvs=allEvs.filter(e=>e.date>=hoje);
+  const uH=futEvs.slice(0,15).map(e=>`<div class="wr0">
+    <div style="width:10px;height:10px;border-radius:50%;background:${e.color};flex-shrink:0"></div>
+    <div style="flex:1"><div style="font-size:.76rem;font-weight:700;line-height:1.3">${e.label.slice(0,48)}${e.label.length>48?'…':''}</div>
+      <div style="font-size:.63rem;color:var(--mu)">${e.cat} · ${e.desc}</div></div>
+    <span style="font-family:var(--fm);font-size:.59rem;color:var(--mu);white-space:nowrap">${e.date}</span>
+  </div>`).join('')||'<div class="es"><div class="ei">✅</div><p>Sem eventos futuros.</p></div>';
+  $('sag').innerHTML=`<div class="wr">
+    <div class="aw-m"><div class="mll">✨ Mensagem de hoje</div><div class="mtt">${mot.t}</div><div class="maa">${mot.a}</div></div>
+    <div class="dnv"><button class="dnb" onclick="chM(-1)">‹</button><span class="dnc">${MNL[calM]} ${calY}</span><button class="dnb" onclick="chM(1)">›</button></div>
+    <div class="cg">${ch}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      ${Object.entries(CAL_COLORS).map(([k,v])=>`<div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:${v}"></div><span style="font-size:.58rem;color:var(--mu);font-weight:600">${k}</span></div>`).join('')}
+    </div>
+    <div class="evc" style="margin-bottom:10px">
+      <div class="slb"><span class="pls"></span>EVENTOS DE ${selD}</div>${dayHtml}</div>
+    <div class="evc">
+      <div class="slb"><span class="pls"></span>PRÓXIMOS (${futEvs.length})</div>${uH}</div>
+  </div>`;
+}
+function selDay(d){window._selDay=d;renderAgenda();}
+function chM(d){calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}window._selDay=null;renderAgenda();}
+
+// ════════════ PERFIL ════════════
+const AVATARES=[
+  {id:'p1',e:'👨‍🔬',l:'Pesquisador'},{id:'p2',e:'👩‍🔬',l:'Pesquisadora'},{id:'p3',e:'🧑‍🏫',l:'Professor(a)'},{id:'p4',e:'🌿',l:'Ecólogo(a)'},
+  {id:'n1',e:'👨🏿‍🔬',l:'Pesquisador'},{id:'n2',e:'👩🏿‍🔬',l:'Pesquisadora'},{id:'n3',e:'🧑🏿‍🏫',l:'Professor(a)'},{id:'n4',e:'👨🏿‍💻',l:'Dev-cientista'},
+  {id:'a1',e:'👨🏻‍🔬',l:'Pesquisador'},{id:'a2',e:'👩🏻‍🔬',l:'Pesquisadora'},{id:'a3',e:'🧑🏻‍🏫',l:'Professor(a)'},{id:'a4',e:'👩🏻‍💻',l:'Dev-cientista'},
+  {id:'m1',e:'👨🏽‍🔬',l:'Pesquisador'},{id:'m2',e:'👩🏽‍🔬',l:'Pesquisadora'},{id:'m3',e:'🧑🏽‍🏫',l:'Professor(a)'},{id:'m4',e:'👨🏽‍💻',l:'Dev-cientista'},
+  {id:'d1',e:'👨‍🎓',l:'Mestrando'},{id:'d2',e:'👩‍🎓',l:'Mestranda'},{id:'d3',e:'👨🏿‍🎓',l:'Mestrando'},{id:'d4',e:'👩🏾‍🎓',l:'Mestranda'},
+  {id:'e1',e:'🌊',l:'Limnólogo(a)'},{id:'e2',e:'🦜',l:'Pantaneiro(a)'},{id:'e3',e:'🔭',l:'Cientista'},{id:'e4',e:'🌱',l:'Biólogo(a)'},
+];
+const CURSOS=['Ciências Biológicas — UNEMAT','Engenharia Ambiental — UNEMAT','Engenharia de Pesca — UNEMAT','Geografia — UNEMAT','Agronomia — UNEMAT','PPGCA — Ciências Ambientais','PROFÁGUA — Recursos Hídricos','PPGEO — Geografia','PPGEDU — Educação','Outro'];
+function openPerfil(){setCC('#8E24AA');show('spr');renderPerfil();}
+function renderPerfil(){
+  const av=AVATARES.find(a=>a.id===PERFIL.avatar)||AVATARES[0];
+  const avEmoji=PERFIL.photo?`<img src="${PERFIL.photo}" class="av-photo" alt="foto">`:`<div style="font-size:4.5rem;line-height:1;${PERFIL.anim?'animation:bounce 2s infinite':''}">${av.e}</div>`;
+  const stats=[{n:DATA.art.length,l:'Artigos'},{n:DATA.proj.length,l:'Projetos'},{n:DATA.app.filter(i=>i.status==='publicado').length,l:'Apps live'},{n:DATA_AA.filter(i=>i.status==='realizado').length,l:'AA concluídos'}];
+  const avHtml=`<div class="av-grid">${AVATARES.map(a=>`<div class="av-btn" onclick="selAv('${a.id}')"><div class="av-emoji ${a.id===PERFIL.avatar?'sel':''}">${a.e}</div><div class="av-lbl ${a.id===PERFIL.avatar?'sel':''}">${a.l}</div></div>`).join('')}</div>`;
+  $('spr').innerHTML=`<div class="wr">
+    <div class="fhd"><button class="bk" onclick="goHome()">←</button><div class="ftt">👤 Meu Perfil</div>
+      <button class="ac dl" onclick="if(confirm('Sair da conta?'))logout()" style="margin-left:auto;width:auto;padding:6px 12px;font-size:.75rem;font-weight:700">Sair 🚪</button>
+    </div>
+    <div style="background:linear-gradient(135deg,#8E24AA,#1E88E5);border-radius:var(--rr);padding:22px;margin-bottom:14px;color:#fff;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+      <div style="margin-bottom:8px">${avEmoji}</div>
+      <div style="font-size:1.1rem;font-weight:900">${PERFIL.nome||currentUser?.displayName||'Seu nome'}</div>
+      <div style="font-size:.75rem;opacity:.8;margin-top:3px">${PERFIL.inst}</div>
+      <div style="font-size:.7rem;opacity:.7;margin-top:2px">${PERFIL.curso}</div>
+      ${PERFIL.bio?`<div style="font-size:.72rem;opacity:.8;margin-top:6px;font-style:italic">"${PERFIL.bio}"</div>`:''}
+      <div style="font-size:.65rem;opacity:.65;margin-top:6px">${currentUser?.email||''}</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
+        ${PERFIL.lattes?`<a href="${PERFIL.lattes}" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;font-size:.65rem;font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;">Lattes</a>`:''}
+        ${PERFIL.orcid?`<a href="https://orcid.org/${PERFIL.orcid}" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;font-size:.65rem;font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;">ORCID</a>`:''}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px">
+      ${stats.map(s=>`<div class="sm"><div class="sn" style="color:var(--cc)">${s.n}</div><div class="sl">${s.l}</div></div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="sti" style="margin-top:0">Informações pessoais</div>
+      <label class="fl">Nome completo</label><input class="fi" id="pfN" value="${PERFIL.nome}" placeholder="Seu nome">
+      <label class="fl">Instituição</label><input class="fi" id="pfI" value="${PERFIL.inst}" placeholder="UNEMAT — Campus Cáceres">
+      <label class="fl">Curso / Programa</label>
+      <select class="fi" id="pfC">${CURSOS.map(c=>`<option ${PERFIL.curso===c?'selected':''}>${c}</option>`).join('')}</select>
+      <label class="fl">Bio curta</label><textarea class="fi" id="pfB" rows="2">${PERFIL.bio}</textarea>
+      <label class="fl">Link Lattes</label><input class="fi" id="pfL" value="${PERFIL.lattes}">
+      <label class="fl">ORCID</label><input class="fi" id="pfO" value="${PERFIL.orcid}" placeholder="0000-0000-0000-0000">
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+        <span class="fl" style="margin:0">Avatar animado</span>
+        <div onclick="PERFIL.anim=!PERFIL.anim;renderPerfil()" style="width:42px;height:22px;border-radius:11px;background:${PERFIL.anim?'#43A047':'#ccc'};cursor:pointer;position:relative;transition:background .2s"><div style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;left:${PERFIL.anim?'22px':'2px'};transition:left .2s"></div></div>
+      </div>
+      <div class="uz" style="margin-top:10px"><input type="file" accept="image/*" onchange="loadPhoto(event)"><div style="font-size:1.2rem;margin-bottom:4px">📷</div><div style="font-size:.78rem;font-weight:700">Carregar foto de perfil</div></div>
+      <button class="sb" onclick="savePerfil()">💾 Salvar perfil</button>
+    </div>
+    <div class="card">
+      <div class="sti" style="margin-top:0">Avatar</div>
+      ${avHtml}
+    </div>
+    ${FIREBASE_MODE?'':'<div style="background:#fff8e1;border:1.5px solid #FB8C00;border-radius:12px;padding:12px;font-size:.72rem;color:#e65100;line-height:1.5;margin-top:10px"><strong>💡 Modo demonstração:</strong> Seus dados são salvos apenas neste dispositivo. Configure o Firebase para salvar na nuvem e acessar de qualquer lugar.</div>'}
+  </div>`;
+}
+function selAv(id){PERFIL.avatar=id;PERFIL.photo=null;renderPerfil();const av=AVATARES.find(a=>a.id===id);toast('Avatar: '+av.e+' '+av.l);}
+function loadPhoto(ev){const r=new FileReader();r.onload=e=>{PERFIL.photo=e.target.result;renderPerfil();toast('Foto carregada!');};r.readAsDataURL(ev.target.files[0]);}
+function savePerfil(){PERFIL.nome=$('pfN').value;PERFIL.inst=$('pfI').value;PERFIL.curso=$('pfC').value;PERFIL.bio=$('pfB').value;PERFIL.lattes=$('pfL').value;PERFIL.orcid=$('pfO').value;scheduleSync();renderPerfil();toast('Perfil salvo ✓');}
+
+// ════════════ MODAL ════════════
+function openModal(ctx,id,fk){
+  mCtx=ctx;if(fk)cF=fk;eId=id;
+  const f=cF&&FR[cF]?FR[cF]:null;const c=f?f.c:'#00897B';
+  setCC(c);$('mSv').style.background=c;$('mSv').textContent='Salvar';
+  if(ctx==='weekadd'){$('mTi').textContent='Nova meta da semana';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Meta</label><input class="fi" id="wT" placeholder="Meta a fechar esta semana...">`;$('ov').classList.add('op');return;}
+  if(ctx==='aa'){
+    const cc2='#00897B';$('mSv').style.background=cc2;$('mTi').style.color=cc2;
+    const it=id?DATA_AA.find(i=>i.id===id):null;
+    $('mTi').textContent=id?'Editar atividade':'Nova atividade — AA';
+    $('mBd').innerHTML=`<label class="fl">Descrição *</label><input class="fi" id="bN" value="${it?it.name:''}" placeholder="Ex: Parecer artigo Hydrobiologia">
+      <div class="fg2">
+        <div><label class="fl">Categoria</label><select class="fi" id="bC">${AA_CATS.filter(c=>c!=='Todos').map(c=>`<option ${it&&it.cat===c?'selected':''} value="${c}">${c}</option>`).join('')}</select></div>
+        <div><label class="fl">Status</label><select class="fi" id="bS">${Object.entries(AA_SL).map(([k,v])=>`<option value="${k}" ${it&&it.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      </div>
+      <div class="fg2">
+        <div><label class="fl">Data</label><input class="fi" id="bD" type="date" value="${it?it.data:''}"></div>
+        <div><label class="fl">Urgência</label><select class="fi" id="bU"><option value="alta" ${it&&it.urgency==='alta'?'selected':''}>🔴 Alta</option><option value="media" ${(!it||it.urgency==='media')?'selected':''}>🟡 Média</option><option value="baixa" ${it&&it.urgency==='baixa'?'selected':''}>🟢 Baixa</option></select></div>
+      </div>
+      <label class="fl">Observações</label><textarea class="fi" id="bO" rows="2">${it?it.obs:''}</textarea>
+      <label class="fl">Link (Google Meet, site do evento...)</label>
+      <div style="display:flex;gap:7px;margin-top:6px">
+        <input class="fi" id="bLL" placeholder="Nome" style="flex:1;margin-top:0">
+        <input class="fi" id="bLU" placeholder="https://..." style="flex:2;margin-top:0">
+      </div>`;
+    $('ov').classList.add('op');return;
+  }
+  if(ctx==='meta'){$('mTi').textContent='Nova meta';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Nome da meta</label><input class="fi" id="mN" placeholder="Ex: Artigo 1 submetido"><label class="fl">Progresso inicial — <span id="mPL">0%</span></label><input type="range" min="0" max="100" value="0" id="mP" oninput="$('mPL').textContent=this.value+'%'">`;$('ov').classList.add('op');return;}
+  if(ctx==='orc'){$('mTi').textContent='Novo lançamento';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Descrição</label><input class="fi" id="oN" placeholder="FAPEMAT parcela 1"><div class="fg2"><div><label class="fl">Categoria</label><input class="fi" id="oC" placeholder="Material, Campo..."></div><div><label class="fl">Tipo</label><select class="fi" id="oT"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div></div><label class="fl">Valor (R$)</label><input class="fi" id="oV" type="number" min="0" placeholder="0.00">`;$('ov').classList.add('op');return;}
+  if(ctx==='prod'){$('mTi').textContent='Novo produto';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Nome</label><input class="fi" id="pN" placeholder="Ex: Artigo CO₂ Pantanal"><div class="fg2"><div><label class="fl">Tipo</label><select class="fi" id="pT"><option>artigo</option><option>resumo</option><option>capitulo</option><option>livro</option><option>evento</option><option>relatorio</option><option>software</option><option>atlas</option><option>outro</option></select></div><div><label class="fl">Status</label><input class="fi" id="pS" placeholder="em escrita..."></div></div>`;$('ov').classList.add('op');return;}
+  if(ctx==='coleta'){$('mTi').textContent='Nova coleta';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Descrição</label><input class="fi" id="cN" placeholder="Coleta câmara #4"><div class="fg2"><div><label class="fl">Data</label><input class="fi" id="cD" type="date"></div><div><label class="fl">Status</label><select class="fi" id="cSt"><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option></select></div></div><label class="fl">Local</label><input class="fi" id="cL" placeholder="Cáceres-MT"><label class="fl">Observações</label><textarea class="fi" id="cO" rows="2"></textarea>`;$('ov').classList.add('op');return;}
+  if(ctx==='aluno'){$('mTi').textContent='Novo aluno';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Nome</label><input class="fi" id="aN"><label class="fl">Título provisório</label><textarea class="fi" id="aTi" rows="2"></textarea><div class="fg2"><div><label class="fl">Orientador</label><input class="fi" id="aO"></div><div><label class="fl">Previsão (aaaa-mm)</label><input class="fi" id="aPr" placeholder="2027-06"></div></div><label class="fl">Status</label><select class="fi" id="aSt"><option value="em andamento">Em andamento</option><option value="qualificação">Qualificação</option><option value="defesa agendada">Defesa agendada</option><option value="defendida">Defendida</option></select>`;$('ov').classList.add('op');return;}
+  if(ctx==='banca'){$('mTi').textContent='Nova banca';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Tipo</label><select class="fi" id="bTi"><option>Qualificação</option><option>Defesa</option><option>Defesa Cotutela</option><option>TCC</option></select><label class="fl">Aluno</label><input class="fi" id="bAl"><label class="fl">Título</label><textarea class="fi" id="bTt" rows="2"></textarea><div class="fg2"><div><label class="fl">Data</label><input class="fi" id="bDt" type="date"></div><div><label class="fl">Status</label><select class="fi" id="bSt"><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="prevista">Prevista</option></select></div></div>`;$('ov').classList.add('op');return;}
+  if(ctx==='relatorio'){$('mTi').textContent='Novo relatório';$('mTi').style.color=c;$('mBd').innerHTML=`<label class="fl">Nome</label><input class="fi" id="rN"><label class="fl">Data</label><input class="fi" id="rD" type="date"><label class="fl">Status</label><select class="fi" id="rSt"><option value="pendente">Pendente</option><option value="entregue">Entregue</option><option value="aprovado">Aprovado</option></select><label class="fl">Obs.</label><input class="fi" id="rO">`;$('ov').classList.add('op');return;}
+  if(ctx==='artinfo'){$('mTi').textContent='Info do artigo';$('mTi').style.color=c;
+    const it=DATA.art.find(i=>i.id===id);
+    $('mBd').innerHTML=`<label class="fl">DOI</label><input class="fi" id="aiDoi" value="${it&&it.doi?it.doi:''}" placeholder="10.xxxx/..."><label class="fl">Fator de Impacto</label><input class="fi" id="aiIf" value="${it&&it.impact?it.impact:''}" placeholder="4.2"><label class="fl">Palavras-chave</label><input class="fi" id="aiKw" value="${it&&it.keywords?it.keywords:''}" placeholder="palavra1; palavra2"><label class="fl">Abstract</label><textarea class="fi" id="aiAbs" rows="4">${it&&it.abstract?it.abstract:''}</textarea>`;
+    $('ov').classList.add('op');return;}
+  // new / edit
+  let it=id?(DATA[cF]||[]).find(i=>i.id===id):null;
+  $('mTi').textContent=id?'Editar item':`Novo — ${f?f.l:'item'}`;$('mTi').style.color=c;
+  const cO=(f?f.cats:[]).filter(x=>x!=='Todos').map(x=>`<option value="${x}" ${it&&it.cat===x?'selected':''}>${x}</option>`).join('');
+  const sO=(f?f.st:[]).map(x=>`<option value="${x}" ${it&&it.status===x?'selected':''}>${SL[x]||x}</option>`).join('');
+  const ext=(f?f.ex:[]).map(e=>`<div><label class="fl">${e.l}</label><input class="fi" id="ef_${e.k}" value="${it&&it[e.k]?it[e.k]:''}" placeholder="${e.l}"></div>`).join('');
+  $('mBd').innerHTML=`<label class="fl">Título *</label><input class="fi" id="fN" value="${it?it.name:''}" placeholder="Nome..."><div class="fg2"><div><label class="fl">Categoria</label><select class="fi" id="fCa" style="margin-top:6px">${cO}</select></div><div><label class="fl">Status</label><select class="fi" id="fSt" style="margin-top:6px">${sO}</select></div></div><label class="fl">Urgência</label><select class="fi" id="fUr"><option value="alta" ${it&&it.urgency==='alta'?'selected':''}>🔴 Alta</option><option value="media" ${(!it||it.urgency==='media')?'selected':''}>🟡 Média</option><option value="baixa" ${it&&it.urgency==='baixa'?'selected':''}>🟢 Baixa</option></select><label class="fl">Progresso — <span id="pL">${it?it.pct:0}%</span></label><input type="range" min="0" max="100" value="${it?it.pct:0}" id="fP" oninput="$('pL').textContent=this.value+'%'">${ext}`;
+  $('ov').classList.add('op');
+}
+function closeModal(){$('ov').classList.remove('op');eId=null;mCtx=null;}
+function doSave(){
+  const f=cF&&FR[cF]?FR[cF]:null;
+  if(mCtx==='weekadd'){const t=$('wT').value.trim();if(!t)return;WEEK.push({t,d:false});closeModal();goHome();scheduleSync();return;}
+  if(mCtx==='aa'){
+    const nm=$('bN').value.trim();if(!nm)return;
+    const links=[];const ll=$('bLL').value.trim(),lu=$('bLU').value.trim();if(ll&&lu)links.push({l:ll,u:lu});
+    const obj={name:nm,cat:$('bC').value,status:$('bS').value,urgency:$('bU').value,data:$('bD').value,obs:$('bO').value,links,files:[]};
+    if(eId){const idx=DATA_AA.findIndex(i=>i.id===eId);if(idx!==-1)DATA_AA[idx]={...DATA_AA[idx],...obj};toast('Atualizado ✓');}
+    else{obj.id=nAAId++;DATA_AA.push(obj);toast('Atividade adicionada ✓');}
+    closeModal();renderAA();scheduleSync();return;
+  }
+  if(mCtx==='meta'){const nm=$('mN').value.trim();if(!nm)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.metas)it.metas=[];it.metas.push({name:nm,pct:parseInt($('mP').value)});closeModal();renderProjDetail();scheduleSync();toast('Meta adicionada');return;}
+  if(mCtx==='orc'){const nm=$('oN').value.trim();if(!nm)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.orcamento)it.orcamento=[];it.orcamento.push({nome:nm,cat:$('oC').value,tipo:$('oT').value,val:parseFloat($('oV').value)||0});closeModal();renderProjDetail();scheduleSync();return;}
+  if(mCtx==='prod'){const nm=$('pN').value.trim();if(!nm)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.produtos)it.produtos=[];it.produtos.push({nome:nm,tipo:$('pT').value,status:$('pS').value});closeModal();renderProjDetail();scheduleSync();return;}
+  if(mCtx==='coleta'){const nm=$('cN').value.trim();if(!nm)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.coletas)it.coletas=[];it.coletas.push({nome:nm,data:$('cD').value,local:$('cL').value,status:$('cSt').value,obs:$('cO').value});closeModal();renderProjDetail();scheduleSync();return;}
+  if(mCtx==='aluno'){const nm=$('aN').value.trim();if(!nm)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.alunos)it.alunos=[];it.alunos.push({nome:nm,titulo:$('aTi').value,orientador:$('aO').value,previsao:$('aPr').value,status:$('aSt').value});closeModal();renderProjDetail();scheduleSync();return;}
+  if(mCtx==='banca'){const al=$('bAl').value.trim();if(!al)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.bancas)it.bancas=[];it.bancas.push({tipo:$('bTi').value,aluno:al,titulo:$('bTt').value,data:$('bDt').value,status:$('bSt').value});closeModal();renderProjDetail();scheduleSync();return;}
+  if(mCtx==='relatorio'){const nm=$('rN').value.trim();if(!nm)return;const it=DATA.proj.find(i=>i.id===eId);if(!it.relatorios)it.relatorios=[];it.relatorios.push({nome:nm,data:$('rD').value,status:$('rSt').value,obs:$('rO').value});closeModal();renderProjDetail();scheduleSync();return;}
+  if(mCtx==='artinfo'){const it=DATA.art.find(i=>i.id===eId);if(!it)return;it.doi=$('aiDoi').value;it.impact=$('aiIf').value;it.keywords=$('aiKw').value;it.abstract=$('aiAbs').value;closeModal();renderArtDetail();scheduleSync();return;}
+  const name=$('fN').value.trim();if(!name){$('fN').focus();return;}
+  const obj={name,cat:$('fCa').value,status:$('fSt').value,urgency:$('fUr').value,pct:parseInt($('fP').value),notes:'',files:[],team:[],dates:[],metas:[],orcamento:[],produtos:[],coletas:[],alunos:[],bancas:[],relatorios:[],abstract:'',keywords:'',doi:'',impact:''};
+  (f?f.ex:[]).forEach(e=>{const el=document.getElementById('ef_'+e.k);if(el)obj[e.k]=el.value||'';});
+  if(eId){const idx=(DATA[cF]||[]).findIndex(i=>i.id===eId);if(idx!==-1)DATA[cF][idx]={...DATA[cF][idx],...obj};toast('Atualizado ✓');}
+  else{obj.id=nId++;if(!DATA[cF])DATA[cF]=[];DATA[cF].push(obj);toast('Adicionado ✓');}
+  closeModal();scheduleSync();
+  if(cF==='art'&&eId)renderArtDetail();else if(cF==='proj'&&eId)renderProjDetail();else renderList();
+}
+
+// ════════════ INIT ════════════
+// ═══ CREDENCIAIS FIREBASE ═══
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCSTBNmzHJE-vIw6jEjlOVE_9femj5n3k8",
+  authDomain: "sopa-fd8b8.firebaseapp.com",
+  projectId: "sopa-fd8b8",
+  storageBucket: "sopa-fd8b8.firebasestorage.app",
+  messagingSenderId: "962393498465",
+  appId: "1:962393498465:web:fc2023af290ce9b6a31b20"
+};
+
+// Inicializar quando página carregar completamente
+window.addEventListener('load', function() {
+  if (typeof firebase !== 'undefined') {
+    localStorage.setItem('sopa_firebase_config', JSON.stringify(FIREBASE_CONFIG));
+    initFirebase(FIREBASE_CONFIG);
+  } else {
+    // Firebase SDK não carregou - sem internet ou arquivo local
+    console.warn('Firebase SDK não carregou - modo demo ativado');
+    showOfflineWarning();
+    useDemoMode();
+  }
+});
+
+function showOfflineWarning() {
+  // Show a brief warning then proceed to demo
+  const w = document.createElement('div');
+  w.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#FB8C00;color:#fff;padding:12px;text-align:center;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:700;z-index:9999';
+  w.textContent = '⚠️ Firebase não carregou. Usando modo demonstração. Abra via GitHub Pages para nuvem completa.';
+  document.body.appendChild(w);
+  setTimeout(() => w.remove(), 5000);
+}
+</script>
+</body>
+</html>
