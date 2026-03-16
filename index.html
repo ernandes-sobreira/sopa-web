@@ -592,8 +592,16 @@ async function onUserLogin(user) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.DATA) Object.assign(DATA, parsed.DATA);
-        if (parsed.DATA_AA) DATA_AA = parsed.DATA_AA;
+        if (parsed.DATA) {
+          Object.assign(DATA, parsed.DATA);
+          const allIds = [...(DATA.art||[]),...(DATA.proj||[]),...(DATA.app||[])].map(i=>Number(i.id)||0);
+          if (allIds.length) nId = Math.max(...allIds) + 1;
+        }
+        if (parsed.DATA_AA) {
+          DATA_AA = parsed.DATA_AA;
+          const aaIds = DATA_AA.map(i=>Number(i.id)||0);
+          if (aaIds.length) nAAId = Math.max(...aaIds) + 1;
+        }
         if (parsed.WEEK) WEEK = parsed.WEEK;
         if (parsed.PERFIL) PERFIL = {...PERFIL,...parsed.PERFIL};
       } catch(e) {}
@@ -633,8 +641,16 @@ async function loadFromFirestore(uid) {
         DATA.proj = fixIds(d.DATA.proj);
         DATA.app = fixIds(d.DATA.app);
         DATA.pessoa = fixIds(d.DATA.pessoa);
+        // Set nId to max existing id + 1 to avoid duplicates
+        const allIds = [...DATA.art,...DATA.proj,...DATA.app,...DATA.pessoa].map(i=>Number(i.id)||0);
+        if (allIds.length) nId = Math.max(...allIds) + 1;
       }
-      if (d.DATA_AA !== undefined) DATA_AA = d.DATA_AA;
+      if (d.DATA_AA !== undefined) {
+        DATA_AA = (d.DATA_AA||[]).map(item => ({...item, id: Number(item.id)}));
+        // Set nAAId to max existing AA id + 1
+        const aaIds = DATA_AA.map(i=>Number(i.id)||0);
+        if (aaIds.length) nAAId = Math.max(...aaIds) + 1;
+      }
       if (d.WEEK !== undefined) WEEK = d.WEEK;
       if (d.PERFIL) PERFIL = {...PERFIL, ...d.PERFIL};
     }
@@ -832,7 +848,7 @@ function renderList(){
   const avg=items.length?Math.round(items.reduce((s,i)=>s+i.pct,0)/items.length):0;
   const cats=f.cats.map(c=>`<div class="cp ${c===cC?'on':''}" onclick="setC('${c}')">${c}</div>`).join('');
   let list=[...items].filter(i=>cC==='Todos'||i.cat===cC).sort((a,b)=>UO[a.urgency]-UO[b.urgency]);
-  const html=list.length?list.map((it,idx)=>{const oc2=cF==='art'?'openArtDetail('+it.id+')':cF==='proj'?'openProjDetail('+it.id+')':"openGenDetail('"+cF+"',"+it.id+')';return `<div class="ic0" style="animation-delay:${idx*.03}s" onclick="${oc2}">
+  const html=list.length?list.map((it,idx)=>{return `<div class="ic0" style="animation-delay:${idx*.03}s" data-id="${it.id}" data-fk="${cF}" onclick="openItem(this)">
     <div class="it0"><span class="in0"><span class="ug ${it.urgency==='alta'?'ua':it.urgency==='media'?'um':'ub'}"></span>${it.name}</span>
     <div class="ia0" onclick="event.stopPropagation()"><button class="ac" onclick="openModal('edit',${it.id},null)">✏️</button><button class="ac dl" onclick="delItem(${it.id})">🗑️</button></div></div>
     <div class="im"><span class="st ${SC_MAP[it.status]||''}">${SL[it.status]||it.status}</span>
@@ -851,7 +867,16 @@ function setC(c){cC=c;renderList();}
 function delItem(id){if(!confirm('Excluir?'))return;DATA[cF]=DATA[cF].filter(i=>i.id!==id);renderList();scheduleSync();toast('Excluído');}
 
 // ════════════ ARTICLE DETAIL ════════════
-function openArtDetail(id){cAI=id;cPS='info';setCC(FR.art.c);show('sad');renderArtDetail();}
+
+function openItem(el) {
+  const id = Number(el.dataset.id);
+  const fk = el.dataset.fk;
+  if (fk === 'art') openArtDetail(id);
+  else if (fk === 'proj') openProjDetail(id);
+  else openGenDetail(fk, id);
+}
+
+function openArtDetail(id){cAI=Number(id);cPS='info';setCC(FR.art.c);show('sad');renderArtDetail();}
 function renderArtDetail(){
   const it=DATA.art.find(i=>i.id==cAI);if(!it)return;
   const tabs=[{k:'info',l:'ℹ️ Info'},{k:'notas',l:'📝 Notas'},{k:'arquivos',l:'📁 Arquivos'},{k:'autores',l:'👥 Autores'},{k:'datas',l:'🔔 Alertas'},{k:'progresso',l:'📊 Progresso'}];
@@ -897,7 +922,7 @@ const PROJ_MENU=[
   {k:'produtos',e:'📦',l:'Produtos'},{k:'coletas',e:'🌿',l:'Coletas'},
   {k:'relatorios',e:'📋',l:'Relatórios'},{k:'arquivos',e:'📁',l:'Arquivos'},{k:'datas',e:'🔔',l:'Alertas'},
 ];
-function openProjDetail(id){cPI=id;cPM='notas';setCC(FR.proj.c);show('spd');renderProjDetail();}
+function openProjDetail(id){cPI=Number(id);cPM='notas';setCC(FR.proj.c);show('spd');renderProjDetail();}
 function renderProjDetail(){
   const it=DATA.proj.find(i=>i.id==cPI);if(!it)return;
   const mH=PROJ_MENU.map(m=>`<div class="pm ${m.k===cPM?'on':''}" onclick="setPM('${m.k}')" title="${m.l}">${m.e}<span>${m.l}</span></div>`).join('');
@@ -972,7 +997,7 @@ function renderProjPanel(it){
 }
 
 // ════════════ GENERIC DETAIL ════════════
-function openGenDetail(fk,id){cGF=fk;cGI=id;cGS='notas';setCC(FR[fk]?FR[fk].c:'#607D8B');show('sgd');renderGenDetail();}
+function openGenDetail(fk,id){cGF=fk;cGI=Number(id);cGS='notas';setCC(FR[fk]?FR[fk].c:'#607D8B');show('sgd');renderGenDetail();}
 function renderGenDetail(){
   const f=FR[cGF];const it=(DATA[cGF]||[]).find(i=>i.id===cGI);if(!it)return;
   const tabs=[{k:'notas',l:'📝 Notas'},{k:'arquivos',l:'📁 Arquivos'},{k:'equipe',l:'👥 Equipe'},{k:'datas',l:'🔔 Alertas'},{k:'progresso',l:'📊 Progresso'}];
