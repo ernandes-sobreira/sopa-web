@@ -454,6 +454,17 @@ function initFirebase(config) {
     storage = firebase.storage();
     FIREBASE_MODE = true;
 
+    // Handle redirect result first (for mobile browsers)
+    auth.getRedirectResult().then(result => {
+      if (result && result.user) {
+        // Redirect login successful - onAuthStateChanged will handle it
+      }
+    }).catch(e => {
+      if (e.code !== 'auth/no-auth-event') {
+        console.warn('Redirect result error:', e.message);
+      }
+    });
+
     // Listen for auth state
     auth.onAuthStateChanged(user => {
       if (user) {
@@ -476,20 +487,53 @@ function initFirebase(config) {
 function loginGoogle() {
   if (!auth) { toast('Configure o Firebase primeiro'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  // Try popup first, fall back to redirect
   auth.signInWithPopup(provider).catch(e => {
-    toast('Erro no login: ' + e.message);
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      // Fallback to redirect
+      auth.signInWithRedirect(provider);
+    } else {
+      toast('Erro no login: ' + e.message);
+      console.error(e);
+    }
   });
 }
 
 function logout() {
-  if (auth) auth.signOut();
-  else {
+  if (auth) {
+    auth.signOut().then(() => {
+      // Clear local state
+      DATA.art=[];DATA.proj=[];DATA.app=[];DATA.pessoa=[];
+      DATA_AA=[];WEEK=[];
+      PERFIL={nome:'',avatar:'m1',photo:null,curso:'PROFÁGUA — Recursos Hídricos',inst:'UNEMAT — Campus Cáceres, Jane Vanini',lattes:'http://lattes.cnpq.br/',orcid:'',bio:'',anim:true};
+    });
+  } else {
     currentUser = null;
-    resetData();
+    DATA.art=[];DATA.proj=[];DATA.app=[];DATA.pessoa=[];
+    DATA_AA=[];WEEK=[];
+    localStorage.removeItem('sopa_data_demo');
     show('s-cfg');
     document.getElementById('topbar').style.display = 'none';
     document.getElementById('botNav').style.display = 'none';
   }
+}
+
+async function clearAllMyData() {
+  if (!confirm('⚠️ Apagar TODOS os seus dados do SOPA? Esta ação não pode ser desfeita.')) return;
+  DATA.art=[];DATA.proj=[];DATA.app=[];DATA.pessoa=[];
+  DATA_AA=[];WEEK=[];
+  if (FIREBASE_MODE && currentUser && db) {
+    try {
+      const docRef = db.collection('users').doc(currentUser.uid).collection('sopa').doc('data');
+      await docRef.delete();
+      toast('Dados apagados ✓');
+    } catch(e) { toast('Erro: '+e.message); }
+  } else {
+    localStorage.removeItem('sopa_data_demo');
+    toast('Dados apagados ✓');
+  }
+  goHome();
 }
 
 function useDemoMode() {
@@ -568,7 +612,7 @@ async function loadFromFirestore(uid) {
     }
     // If no data exists yet, everything stays empty (new user)
     setSyncStatus('ok');
-    toast('Dados carregados ✓');
+    // data loaded silently
   } catch(e) {
     setSyncStatus('offline');
     toast('Erro ao carregar: ' + e.message);
@@ -1191,7 +1235,10 @@ function renderPerfil(){
   const avHtml=`<div class="av-grid">${AVATARES.map(a=>`<div class="av-btn" onclick="selAv('${a.id}')"><div class="av-emoji ${a.id===PERFIL.avatar?'sel':''}">${a.e}</div><div class="av-lbl ${a.id===PERFIL.avatar?'sel':''}">${a.l}</div></div>`).join('')}</div>`;
   $('spr').innerHTML=`<div class="wr">
     <div class="fhd"><button class="bk" onclick="goHome()">←</button><div class="ftt">👤 Meu Perfil</div>
-      <button class="ac dl" onclick="if(confirm('Sair da conta?'))logout()" style="margin-left:auto;width:auto;padding:6px 12px;font-size:.75rem;font-weight:700">Sair 🚪</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+      <button onclick="clearAllMyData()" style="background:#ffebee;border:1.5px solid #ef9a9a;border-radius:8px;color:#c62828;padding:6px 10px;font-family:var(--ff);font-size:.7rem;font-weight:700;cursor:pointer">🗑️ Limpar dados</button>
+      <button onclick="if(confirm('Sair da conta?'))logout()" style="background:var(--bg);border:1.5px solid var(--bd);border-radius:8px;color:var(--mu);padding:6px 10px;font-family:var(--ff);font-size:.7rem;font-weight:700;cursor:pointer">Sair 🚪</button>
+    </div>
     </div>
     <div style="background:linear-gradient(135deg,#8E24AA,#1E88E5);border-radius:var(--rr);padding:22px;margin-bottom:14px;color:#fff;text-align:center;position:relative;overflow:hidden">
       <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
