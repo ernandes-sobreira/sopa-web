@@ -1279,12 +1279,55 @@ function chM(d){calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}wi
 
 // ════════════ PERFIL ════════════
 const AVATARES=[
-  {id:'p1',e:'👨‍🔬',l:'Pesquisador'},{id:'p2',e:'👩‍🔬',l:'Pesquisadora'},{id:'p3',e:'🧑‍🏫',l:'Professor(a)'},{id:'p4',e:'🌿',l:'Ecólogo(a)'},
-  {id:'n1',e:'👨🏿‍🔬',l:'Pesquisador'},{id:'n2',e:'👩🏿‍🔬',l:'Pesquisadora'},{id:'n3',e:'🧑🏿‍🏫',l:'Professor(a)'},{id:'n4',e:'👨🏿‍💻',l:'Dev-cientista'},
-  {id:'a1',e:'👨🏻‍🔬',l:'Pesquisador'},{id:'a2',e:'👩🏻‍🔬',l:'Pesquisadora'},{id:'a3',e:'🧑🏻‍🏫',l:'Professor(a)'},{id:'a4',e:'👩🏻‍💻',l:'Dev-cientista'},
-  {id:'m1',e:'👨🏽‍🔬',l:'Pesquisador'},{id:'m2',e:'👩🏽‍🔬',l:'Pesquisadora'},{id:'m3',e:'🧑🏽‍🏫',l:'Professor(a)'},{id:'m4',e:'👨🏽‍💻',l:'Dev-cientista'},
-  {id:'d1',e:'👨‍🎓',l:'Mestrando'},{id:'d2',e:'👩‍🎓',l:'Mestranda'},{id:'d3',e:'👨🏿‍🎓',l:'Mestrando'},{id:'d4',e:'👩🏾‍🎓',l:'Mestranda'},
-  {id:'e1',e:'🌊',l:'Limnólogo(a)'},{id:'e2',e:'🦜',l:'Pantaneiro(a)'},{id:'e3',e:'🔭',l:'Cientista'},{id:'e4',e:'🌱',l:'Biólogo(a)'},
+  // 🔬 Ciências & Pesquisa
+  {id:'p1',e:'👨🏽‍🔬',l:'Pesquisador'},{id:'p2',e:'👩🏽‍🔬',l:'Pesquisadora'},
+  {id:'p3',e:'👨🏿‍🔬',l:'Pesquisador'},{id:'p4',e:'👩🏿‍🔬',l:'Pesquisadora'},
+  {id:'p5',e:'👨🏻‍🔬',l:'Pesquisador'},{id:'p6',e:'👩🏻‍🔬',l:'Pesquisadora'},
+  {id:'p7',e:'👨‍🔬',l:'Pesquisador'},{id:'p8',e:'👩‍🔬',l:'Pesquisadora'},
+  // 🏫 Docência
+  {id:'t1',e:'🧑🏽‍🏫',l:'Professor(a)'},{id:'t2',e:'🧑🏿‍🏫',l:'Professor(a)'},
+  {id:'t3',e:'🧑🏻‍🏫',l:'Professor(a)'},{id:'t4',e:'🧑‍🏫',l:'Professor(a)'},
+  // 🎓 Pós-graduação
+  {id:'g1',e:'👨🏽‍🎓',l:'Mestrando'},{id:'g2',e:'👩🏽‍🎓',l:'Mestranda'},
+  {id:'g3',e:'👨🏿‍🎓',l:'Doutorando'},{id:'g4',e:'👩🏿‍🎓',l:'Doutoranda'},
+  {id:'g5',e:'👨🏻‍🎓',l:'Pós-doc'},{id:'g6',e:'👩🏻‍🎓',l:'Pós-doc'},
+  {id:'g7',e:'👨‍🎓',l:'Mestrando'},{id:'g8',e:'👩‍🎓',l:'Mestranda'},
+  // 💻 Tecnologia
+  {id:'c1',e:'👨🏽‍💻',l:'Dev-cientista'},{id:'c2',e:'👩🏽‍💻',l:'Dev-cientista'},
+  {id:'c3',e:'👨🏿‍💻',l:'Dev-cientista'},{id:'c4',e:'👩🏻‍💻',l:'Dev-cientista'},
+  // 🩺 Saúde
+  {id:'h1',e:'👨🏽‍⚕️',l:'Médico(a)'},{id:'h2',e:'👩🏽‍⚕️',l:'Médico(a)'},
+  {id:'h3',e:'👨🏿‍⚕️',l:'Médico(a)'},{id:'h4',e:'👩🏻‍⚕️',l:'Médico(a)'},
+  // 🌿 Biologia & Ecologia
+  {id:'b1',e:'🌱',l:'Biólogo(a)'},{id:'b2',e:'🍀',l:'Botânico(a)'},
+  {id:'b3',e:'🦋',l:'Zoólogo(a)'},{id:'b4',e:'🧬',l:'Geneticista'},
+  {id:'b5',e:'🌾',l:'Agrônomo(a)'},{id:'b6',e:'🐟',l:'Ictiólogo(a)'},
+  {id:'b7',e:'🦟',l:'Entomólogo(a)'},{id:'b8',e:'🍄',l:'Micólogo(a)'},
+  // 🌍 Geografia & Ambiente
+  {id:'geo1',e:'🗺️',l:'Geógrafo(a)'},{id:'geo2',e:'🏔️',l:'Geógrafo(a)'},
+  {id:'geo3',e:'🌐',l:'Geógrafo(a)'},{id:'geo4',e:'📡',l:'Geoprocessamento'},
+  // 🏃 Ed. Física & Esporte
+  {id:'ef1',e:'🏃🏽',l:'Ed. Física'},{id:'ef2',e:'🏃🏿‍♀️',l:'Ed. Física'},
+  {id:'ef3',e:'⚽',l:'Ed. Física'},{id:'ef4',e:'🏊',l:'Ed. Física'},
+  // 📚 Humanas & Educação
+  {id:'edu1',e:'📚',l:'Pedagogo(a)'},{id:'edu2',e:'✏️',l:'Pedagogo(a)'},
+  {id:'edu3',e:'📖',l:'Letras'},{id:'edu4',e:'🖊️',l:'Letras'},
+  {id:'edu5',e:'🎨',l:'Artes'},{id:'edu6',e:'🎭',l:'Artes'},
+  {id:'edu7',e:'🎵',l:'Música'},{id:'edu8',e:'📐',l:'Matemática'},
+  // 🌳 Amazônia & Cerrado & Pantanal
+  {id:'am1',e:'🌳',l:'Amazônia'},{id:'am2',e:'🦚',l:'Amazônia'},
+  {id:'am3',e:'🌴',l:'Amazônia'},{id:'am4',e:'🐊',l:'Pantanal'},
+  {id:'am5',e:'🦜',l:'Pantaneiro(a)'},{id:'am6',e:'🌊',l:'Limnólogo(a)'},
+  {id:'am7',e:'🔥',l:'Cerrado'},{id:'am8',e:'🌵',l:'Cerrado'},
+  {id:'am9',e:'🦌',l:'Cerrado'},{id:'am10',e:'🐾',l:'Zoólogo(a)'},
+  {id:'am11',e:'🌺',l:'Botânico(a)'},{id:'am12',e:'🦩',l:'Ornitólogo(a)'},
+  // 💧 Recursos Hídricos
+  {id:'w1',e:'💧',l:'Recursos Hídricos'},{id:'w2',e:'🌊',l:'Limnólogo(a)'},
+  {id:'w3',e:'🏞️',l:'Recursos Hídricos'},{id:'w4',e:'🌧️',l:'Climatologista'},
+  // 🔭 Outros
+  {id:'x1',e:'🔭',l:'Astrônomo(a)'},{id:'x2',e:'⚗️',l:'Químico(a)'},
+  {id:'x3',e:'🏛️',l:'Gestor Público'},{id:'x4',e:'📊',l:'Estatístico(a)'},
+  {id:'x5',e:'🤝',l:'Colaborador(a)'},{id:'x6',e:'🌍',l:'Consultor(a)'},
 ];
 const CURSOS=['Ciências Biológicas — UNEMAT','Engenharia Ambiental — UNEMAT','Engenharia de Pesca — UNEMAT','Geografia — UNEMAT','Agronomia — UNEMAT','PPGCA — Ciências Ambientais','PROFÁGUA — Recursos Hídricos','PPGEO — Geografia','PPGEDU — Educação','Outro'];
 function openPerfil(){setCC('#8E24AA');show('spr');renderPerfil();}
