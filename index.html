@@ -6872,6 +6872,20 @@ function renderOrient(){
           ${reunioesHtml}
         </div>
 
+        <!-- Docs section -->
+        <div style="padding:8px 14px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:.68rem;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;">Docs <span style="color:#4B5563;">${(o.docs||[]).length}</span></span>
+            <button data-action="add-doc" data-oid="${o.id}" style="background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.2);border-radius:6px;padding:2px 8px;color:#FACC15;font-size:.65rem;font-weight:700;cursor:pointer;">+ Doc</button>
+          </div>
+          ${(o.docs||[]).length ? (o.docs||[]).slice(-2).map(d=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+              <span style="font-size:.65rem;color:#6B7280;flex-shrink:0;">📄 ${d.data||''}</span>
+              <span style="font-size:.76rem;color:#9CA3AF;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.nome||d.titulo||''}</span>
+              <button data-action="del-doc" data-oid="${o.id}" data-did="${d.id||d.nome}" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;">✕</button>
+            </div>`).join('') : '<div style="font-size:.72rem;color:#374151;padding:2px 0;">Sem docs</div>'}
+        </div>
+
         <!-- Action buttons -->
         <div style="display:flex;gap:6px;padding:10px 14px 12px;">
           <button data-action="edit-orient" data-oid="${o.id}" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px;color:#9CA3AF;font-size:.72rem;cursor:pointer;">✏️ Editar</button>
@@ -7145,23 +7159,44 @@ function odRemoveDoc(oid, did){
 }
 
 function odAddOrientando(){
-  const nome = prompt('Nome completo do orientando:');
-  if(!nome?.trim()) return;
-  const nivel = prompt('Nível (Doutorado / Mestrado):') || 'Mestrado';
-  const tema  = prompt('Tema da pesquisa:') || '';
-  const cores = ['#1447A0','#0A6640','#C44B0A','#5B21B6','#0E7490','#7C3AED'];
-  const cor = cores[ORIENTANDOS.length % cores.length];
-  const inics = nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  ORIENTANDOS.push({
-    id:'o'+Date.now(), nome:nome.trim(), nivel, programa:'PPGCA', tema,
-    inicio:new Date().getFullYear().toString(),
-    previsao:(new Date().getFullYear()+4).toString(),
-    prog:0, status:'Em andamento', cor, avatar:inics,
-    proxima_entrega:'', prazo_entrega:'',
-    metas:[], reunioes:[], docs:[], bolsa:'', tags:[]
-  });
-  saveOrientandos(); renderOrient();
-  toast(`✅ ${nome.trim()} adicionado`);
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.88);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;';
+  const today = new Date().toISOString().slice(0,10);
+  modal.innerHTML = '<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(0,212,255,.3);max-height:85vh;overflow-y:auto;">' +
+    '<div style="font-family:monospace;font-size:.75rem;color:#00D4FF;font-weight:700;margin-bottom:14px;">🎓 NOVO ORIENTANDO</div>' +
+    '<input id="no-nome" placeholder="Nome completo..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<select id="no-nivel" style="width:100%;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<option value="Doutorado">Doutorado</option><option value="Mestrado">Mestrado</option><option value="IC">IC</option><option value="TCC">TCC</option></select>' +
+    '<select id="no-prog" style="width:100%;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<option>PPGCA</option><option>ProfAgua</option><option>Graduação</option><option>Outro</option></select>' +
+    '<input id="no-tema" placeholder="Tema da pesquisa..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<input id="no-inicio" type="date" value="'+today+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px;">' +
+    '<div style="display:flex;gap:8px;">' +
+    '<button id="no-cancel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>' +
+    '<button id="no-save" style="flex:2;background:linear-gradient(135deg,#00D4FF,#A855F7);border:none;border-radius:10px;padding:12px;color:#050810;font-size:.85rem;font-weight:800;cursor:pointer;">Adicionar</button>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+  document.getElementById('no-cancel').onclick = ()=>modal.remove();
+  document.getElementById('no-save').onclick = ()=>{
+    const nome = document.getElementById('no-nome').value.trim();
+    if(!nome){ document.getElementById('no-nome').focus(); return; }
+    const nivel = document.getElementById('no-nivel').value;
+    const programa = document.getElementById('no-prog').value;
+    const tema = document.getElementById('no-tema').value.trim();
+    const inicio = document.getElementById('no-inicio').value;
+    const cores=['#00D4FF','#A855F7','#00FF88','#FACC15','#F97316','#FF4B6E','#38BDF8','#34D399'];
+    const cor = cores[ORIENTANDOS.length % cores.length];
+    const inics = nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    ORIENTANDOS.push({
+      id:'o'+Date.now(), nome:nome.trim(), nivel, programa, tema,
+      inicio, prazo_entrega:'', status:'Em andamento', bolsa:'',
+      cor, avatar:inics, inviteCode:'', aluno_uid:'',
+      metas:[], reunioes:[], docs:[], pct:0
+    });
+    saveData(); modal.remove(); renderOrient();
+  };
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+  setTimeout(()=>document.getElementById('no-nome').focus(),100);
 }
 
 
@@ -12900,13 +12935,57 @@ document.addEventListener('click', function(e){
   const rid = btn.dataset.rid;
   if(action==='add-meta') odAddMetaInline(oid);
   else if(action==='add-reuniao') odAddReuniaoInline(oid);
+  else if(action==='add-doc') odAddDocInline(oid);
   else if(action==='toggle-meta') odToggleMetaInline(oid, mid);
   else if(action==='del-meta') odDelMetaInline(oid, mid);
   else if(action==='del-reuniao') odDelReuniaoInline(oid, rid);
-  else if(action==='edit-orient') openOrientEdit(oid);
-  else if(action==='vincular'){ const o=ORIENTANDOS.find(x=>x.id==oid); if(o) gerarConvite(o); }
-  else if(action==='del-orient') delOrient(oid);
+  else if(action==='del-doc') odDelDocInline(oid, btn.dataset.did);
+  else if(action==='edit-orient'){ _odOpen=oid; _odTab='info'; document.getElementById('od-panel').classList.add('on'); renderOdSheet(); }
+  else if(action==='vincular') gerarConviteAluno(oid);
+  else if(action==='del-orient'){
+    const o=ORIENTANDOS.find(x=>x.id==oid);
+    if(o && confirm('Remover '+o.nome+'?')){
+      ORIENTANDOS=ORIENTANDOS.filter(x=>x.id!=oid);
+      saveData(); renderOrient();
+    }
+  }
 });
+
+function odAddDocInline(oid){
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.85);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;';
+  modal.innerHTML = '<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(250,204,21,.3);">' +
+    '<div style="font-family:monospace;font-size:.75rem;color:#FACC15;font-weight:700;margin-bottom:14px;">📄 NOVO DOCUMENTO</div>' +
+    '<input id="od-doc-nome" placeholder="Nome do documento..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">' +
+    '<input id="od-doc-tipo" placeholder="Tipo (ex: Capítulo, Artigo, Relatório)..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">' +
+    '<input id="od-doc-data" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">' +
+    '<input id="od-doc-url" placeholder="Link (opcional)..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px;">' +
+    '<div style="display:flex;gap:8px;">' +
+    '<button id="od-doc-cancel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>' +
+    '<button id="od-doc-save" style="flex:2;background:linear-gradient(135deg,#FACC15,#F59E0B);border:none;border-radius:10px;padding:12px;color:#050810;font-size:.85rem;font-weight:800;cursor:pointer;">Salvar</button>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+  document.getElementById('od-doc-cancel').onclick = ()=>modal.remove();
+  document.getElementById('od-doc-save').onclick = ()=>{
+    const nome = document.getElementById('od-doc-nome').value.trim();
+    if(!nome){ document.getElementById('od-doc-nome').focus(); return; }
+    const tipo = document.getElementById('od-doc-tipo').value.trim();
+    const data = document.getElementById('od-doc-data').value;
+    const url = document.getElementById('od-doc-url').value.trim();
+    const o = ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+    if(!o.docs)o.docs=[];
+    o.docs.push({id:'d'+Date.now(),nome,tipo,data,url});
+    saveData(); modal.remove(); renderOrient();
+  };
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+  setTimeout(()=>document.getElementById('od-doc-nome').focus(),100);
+}
+
+function odDelDocInline(oid, did){
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  o.docs=(o.docs||[]).filter(d=>(d.id||d.nome)!=did);
+  saveData(); renderOrient();
+}
 </script>
 
 </body>
