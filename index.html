@@ -1974,6 +1974,9 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 .od-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
 .od-item:last-child{border-bottom:none;}
 </style>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 </head>
 <body>
 
@@ -12366,7 +12369,12 @@ window.sendChat = async function(){
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('service-worker.js')
-      .then(reg => console.log('SW registrado:', reg.scope))
+      .then(reg => {
+        console.log('SW v46 registrado:', reg.scope);
+        // Force update immediately
+        reg.update();
+        if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+      })
       .catch(err => console.log('SW erro:', err));
   });
 }
