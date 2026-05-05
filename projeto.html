@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOPA">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Projeto — SOPA UNEMAT</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#050810;--w:rgba(13,17,23,.92);--ink:#E8EAED;--mu:#6B7280;
+  --bd:rgba(0,212,255,.12);--acc:#00D4FF;--green:#00FF88;
+  --ff:'Outfit',sans-serif;--fm:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);font-family:var(--ff);color:var(--ink);min-height:100vh;}
+canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;z-index:100;background:#050810;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.load-logo{font-family:var(--fm);font-size:1.5rem;font-weight:700;color:#00D4FF;letter-spacing:.1em;text-shadow:0 0 20px rgba(0,212,255,.4);}
+.load-sub{font-size:.72rem;color:#6B7280;font-family:var(--fm);}
+.load-spinner{width:32px;height:32px;border:2px solid rgba(0,212,255,.1);border-top-color:#00D4FF;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── BLOCKED ── */
+#blocked{position:fixed;inset:0;z-index:100;background:#050810;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+.blocked-icon{font-size:3rem;margin-bottom:16px;}
+.blocked-title{font-family:var(--fm);font-size:1rem;font-weight:700;color:#FF6B35;letter-spacing:.06em;margin-bottom:8px;}
+.blocked-sub{font-size:.8rem;color:#6B7280;line-height:1.6;}
+
+/* ── TOPBAR ── */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(5,8,16,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);padding:0 16px;height:52px;display:flex;align-items:center;gap:10px;}
+.topbar-brand{font-family:var(--fm);font-size:.8rem;font-weight:700;color:#00D4FF;letter-spacing:.06em;}
+.topbar-title{font-size:.75rem;font-weight:600;color:var(--mu);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.perm-badge{font-family:var(--fm);font-size:.58rem;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:.04em;text-transform:uppercase;flex-shrink:0;}
+
+/* ── MAIN ── */
+#app{position:relative;z-index:1;display:none;}
+.proj-header{padding:16px 16px 0;}
+.proj-title{font-size:1.05rem;font-weight:800;color:var(--ink);line-height:1.35;margin-bottom:10px;}
+.proj-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.proj-tag{font-family:var(--fm);font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.04em;}
+.proj-progress{margin-bottom:14px;}
+.prog-label{display:flex;justify-content:space-between;font-size:.65rem;font-weight:700;margin-bottom:4px;}
+.prog-bar{height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#00D4FF,#00FF88);transition:width .6s;}
+
+/* ── TABS ── */
+.tabs{display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bd);background:rgba(5,8,16,.8);position:sticky;top:52px;z-index:40;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex-shrink:0;padding:10px 12px;font-size:.68rem;font-weight:700;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc);}
+
+/* ── CONTENT ── */
+.content{padding:14px 14px 60px;}
+
+/* ── CARDS ── */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.card-title{font-size:.86rem;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.card-sub{font-size:.65rem;color:var(--mu);}
+.meta-bar{height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin:6px 0 4px;}
+.meta-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#00D4FF,#00FF88);}
+.meta-pct{font-family:var(--fm);font-size:.6rem;color:var(--acc);}
+.meta-done{opacity:.4;text-decoration:line-through;}
+
+.team-card{background:var(--w);border:1px solid var(--bd);border-radius:12px;padding:11px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:center;}
+.team-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:#050810;flex-shrink:0;}
+.team-name{font-size:.84rem;font-weight:700;color:var(--ink);}
+.team-role{font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:5px;margin-top:3px;display:inline-block;letter-spacing:.04em;text-transform:uppercase;}
+
+.empty{text-align:center;padding:40px 16px;color:rgba(0,212,255,.2);}
+.empty-icon{font-size:2.5rem;margin-bottom:8px;}
+.empty-txt{font-size:.8rem;color:var(--mu);}
+
+/* ── EDIT INPUTS ── */
+.edit-input{width:100%;padding:9px 12px;background:rgba(0,0,0,.4);border:1px solid rgba(0,212,255,.2);border-radius:8px;font-family:var(--ff);font-size:.84rem;color:var(--ink);outline:none;transition:border-color .15s;margin-bottom:8px;}
+.edit-input:focus{border-color:#00D4FF;}
+.save-btn{width:100%;padding:11px;background:linear-gradient(135deg,#0EA5E9,#00D4FF);color:#050810;border:none;border-radius:9px;font-family:var(--fm);font-size:.78rem;font-weight:700;cursor:pointer;letter-spacing:.04em;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);background:#0D1117;color:#00D4FF;font-size:.72rem;font-weight:700;padding:8px 18px;border-radius:20px;z-index:300;opacity:0;transition:all .2s;pointer-events:none;border:1px solid rgba(0,212,255,.3);font-family:var(--fm);}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<div id="loading">
+  <div class="load-logo">S·O·P·A</div>
+  <div class="load-sub">Carregando projeto...</div>
+  <div class="load-spinner"></div>
+</div>
+
+<div id="blocked" style="display:none;">
+  <div class="blocked-icon">🔒</div>
+  <div class="blocked-title">Link Inválido ou Expirado</div>
+  <div class="blocked-sub">Este link não existe ou foi revogado pelo proprietário.<br>Solicite um novo link.</div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">S·O·P·A</div>
+    <div class="topbar-title" id="top-title">—</div>
+    <div class="perm-badge" id="perm-badge"></div>
+  </div>
+  <div class="proj-header" id="proj-header"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="content" id="content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── FIREBASE ──
+firebase.initializeApp({
+  apiKey:"AIzaSyCSTBNmzHJE-vIw6jEjlOVE_9femj5n3k8",
+  authDomain:"sopa-fd8b8.firebaseapp.com",
+  projectId:"sopa-fd8b8",
+  storageBucket:"sopa-fd8b8.firebasestorage.app",
+});
+const db = firebase.firestore();
+
+let PROJ = null;
+let PERM = 'view';
+let CODE = '';
+let TAB  = 'metas';
+
+// ── INIT ──
+const params = new URLSearchParams(window.location.search);
+CODE = params.get('k') || '';
+
+if(!CODE){
+  showBlocked();
+} else {
+  loadProject();
+}
+
+async function loadProject(){
+  try{
+    const snap = await db.collection('projetos_publicos').doc(CODE).get();
+    if(!snap.exists || snap.data().ativo === false){
+      showBlocked(); return;
+    }
+    const data = snap.data();
+    PROJ = data.projeto;
+    PERM = data.perm || 'view';
+    document.title = PROJ.name?.slice(0,40) + ' — SOPA';
+    showApp();
+  }catch(e){
+    // Offline fallback — try localStorage cache
+    const cached = localStorage.getItem('sopa_proj_cache_'+CODE);
+    if(cached){
+      const d = JSON.parse(cached);
+      PROJ = d.projeto; PERM = d.perm || 'view';
+      showApp();
+    } else {
+      showBlocked();
+    }
+  }
+}
+
+async function saveProject(){
+  if(PERM !== 'edit') return;
+  try{
+    await db.collection('projetos_publicos').doc(CODE).update({ projeto: PROJ, updated: new Date().toISOString() });
+    localStorage.setItem('sopa_proj_cache_'+CODE, JSON.stringify({projeto:PROJ,perm:PERM}));
+    toast('✅ Salvo!');
+  }catch(e){ toast('⚠️ Sem conexão — salvo localmente'); localStorage.setItem('sopa_proj_cache_'+CODE, JSON.stringify({projeto:PROJ,perm:PERM})); }
+}
+
+function showBlocked(){
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('blocked').style.display = 'flex';
+}
+
+function showApp(){
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderHeader();
+  renderTabs();
+  renderContent();
+  initBg();
+}
+
+// ── HEADER ──
+function renderHeader(){
+  const tot = PROJ.metas?.length
+    ? Math.round(PROJ.metas.reduce((s,m)=>s+m.pct,0)/PROJ.metas.length)
+    : PROJ.pct||0;
+
+  const SC = {'Em andamento':'#00D4FF','Concluído':'#00FF88','Pausado':'#FF6B35','Planejado':'#A855F7'};
+  const sc = SC[PROJ.status]||'#6B7280';
+
+  document.getElementById('top-title').textContent = PROJ.name?.slice(0,40)||'Projeto';
+  const pb = document.getElementById('perm-badge');
+  pb.textContent = PERM==='edit' ? '✏️ edição' : '👁 leitura';
+  pb.style.background = PERM==='edit' ? 'rgba(0,255,136,.12)' : 'rgba(0,212,255,.1)';
+  pb.style.color = PERM==='edit' ? '#00FF88' : '#00D4FF';
+  pb.style.border = PERM==='edit' ? '1px solid rgba(0,255,136,.25)' : '1px solid rgba(0,212,255,.2)';
+
+  document.getElementById('proj-header').innerHTML = `
+    <div style="font-size:1.05rem;font-weight:800;color:#E8EAED;line-height:1.35;margin-bottom:10px;">${PROJ.name||'Projeto'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:6px;background:${sc}18;color:${sc};border:1px solid ${sc}33;">${PROJ.status||'Em andamento'}</span>
+      ${PROJ.financiador?`<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(250,204,21,.1);color:#FACC15;border:1px solid rgba(250,204,21,.2);">💰 ${PROJ.financiador}</span>`:''}
+      ${PROJ.vigencia?`<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(0,255,136,.08);color:#00FF88;border:1px solid rgba(0,255,136,.2);">📅 ${PROJ.vigencia}</span>`:''}
+    </div>
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;font-size:.65rem;font-weight:700;margin-bottom:4px;">
+        <span style="color:#6B7280;">Progresso</span>
+        <span style="color:${sc};font-family:'JetBrains Mono',monospace;">${tot}%</span>
+      </div>
+      <div style="height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${tot}%;background:linear-gradient(90deg,${sc},${sc}88);border-radius:4px;transition:width .6s;"></div>
+      </div>
+    </div>`;
+}
+
+// ── TABS ──
+const TABS_DEF = [
+  {k:'metas',e:'🎯',l:'Metas'},
+  {k:'equipe',e:'👥',l:'Equipe'},
+  {k:'produtos',e:'📦',l:'Produtos'},
+  {k:'orcamento',e:'💰',l:'Orçamento'},
+  {k:'alunos',e:'🎓',l:'Alunos'},
+  {k:'coletas',e:'🌿',l:'Coletas'},
+  {k:'relatorios',e:'📋',l:'Relatórios'},
+  {k:'datas',e:'🔔',l:'Alertas'},
+  {k:'notas',e:'📝',l:'Notas'},
+];
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = TABS_DEF.map(t=>`
+    <div class="tab${TAB===t.k?' on':''}" onclick="TAB='${t.k}';renderTabs();renderContent();">
+      ${t.e} ${t.l}
+    </div>`).join('');
+}
+
+// ── CONTENT ──
+function renderContent(){
+  const el = document.getElementById('content');
+  const canEdit = PERM==='edit';
+
+  const _empty = (icon,msg) => `<div class="empty"><div class="empty-icon">${icon}</div><div class="empty-txt">${msg}</div></div>`;
+  const _del = (expr) => canEdit ? `<button onclick="${expr};saveProject();renderContent();" style="background:none;border:none;cursor:pointer;color:#6B7280;padding:4px;font-size:.8rem;">🗑</button>` : '';
+
+  if(TAB==='metas'){
+    const ms = PROJ.metas||[];
+    el.innerHTML = `
+      ${canEdit ? `<button onclick="addMeta()" style="width:100%;padding:10px;background:rgba(0,212,255,.05);border:1.5px dashed rgba(0,212,255,.2);border-radius:10px;font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:700;color:rgba(0,212,255,.6);cursor:pointer;margin-bottom:10px;">+ Adicionar meta</button>` : ''}
+      ${ms.map((m,mi)=>`
+        <div class="card">
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${m.pct>=100?'#00FF88':'rgba(0,212,255,.3)'};background:${m.pct>=100?'#00FF88':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;cursor:${canEdit?'pointer':'default'};"
+              ${canEdit?`onclick="toggleMeta(${mi})"`:''}>${m.pct>=100?'✓':''}</div>
+            <div style="flex:1;">
+              <div class="card-title${m.pct>=100?' meta-done':''}">${m.name}</div>
+              ${m.due?`<div class="card-sub">Prazo: ${new Date(m.due).toLocaleDateString('pt-BR')}</div>`:''}
+            </div>
+            ${_del(`PROJ.metas.splice(${mi},1)`)}
+          </div>
+          <div class="meta-bar"><div class="meta-fill" style="width:${m.pct}%;"></div></div>
+          <div class="meta-pct">${m.pct}%</div>
+          ${canEdit?`<input type="range" min="0" max="100" value="${m.pct}" style="width:100%;height:3px;accent-color:#00D4FF;margin-top:6px;" oninput="PROJ.metas[${mi}].pct=Number(this.value);this.previousElementSibling.textContent=this.value+'%';this.closest('.card').querySelector('.meta-fill').style.width=this.value+'%'" onchange="saveProject();">`:''}
+        </div>`).join('') || _empty('🎯','Nenhuma meta cadastrada')}`;
+  }
+
+  else if(TAB==='equipe'){
+    const ROLE_C={'coordenador':'#FF4B6E','pesquisador':'#00D4FF','bolsista':'#FACC15','membro':'#00FF88','colaborador':'#A855F7','aluno':'#FF6B35'};
+    const team = PROJ.team||[];
+    el.innerHTML = `
+      ${canEdit?`<button onclick="addMembro()" style="width:100%;padding:10px;background:rgba(0,212,255,.05);border:1.5px dashed rgba(0,212,255,.2);border-radius:10px;font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:700;color:rgba(0,212,255,.6);cursor:pointer;margin-bottom:10px;">+ Adicionar membro</button>`:''}
+      ${team.map((m,ti)=>{
+        const parts=m.split(' — '); const nome=parts[0].trim(), papel=(parts[1]||'Membro').trim();
+        const cor=Object.entries(ROLE_C).find(([k])=>papel.toLowerCase().includes(k))?.[1]||'#6B7280';
+        const inits=nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+        return `<div class="team-card">
+          <div class="team-av" style="background:${cor};">${inits}</div>
+          <div style="flex:1;"><div class="team-name">${nome}</div>
+          <span class="team-role" style="background:${cor}18;color:${cor};">${papel}</span></div>
+          ${_del(`PROJ.team.splice(${ti},1)`)}
+        </div>`;}).join('') || _empty('👥','Nenhum membro')}`;
+  }
+
+  else if(TAB==='produtos'){
+    const PROD_I={artigo:'📄',relatorio:'📋',evento:'🎪',software:'💻',livro:'📚',capitulo:'📖',outro:'📦'};
+    const PROD_C={'concluído':'#00FF88','em produção':'#00D4FF','planejado':'#A855F7','submetido':'#FF6B35','publicado':'#FACC15'};
+    el.innerHTML = (PROJ.produtos||[]).map((p,pi)=>{
+      const sc=PROD_C[p.status?.toLowerCase()]||'#6B7280';
+      return `<div class="card" style="border-left:3px solid ${sc};">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="font-size:1.3rem;">${PROD_I[p.tipo]||'📦'}</div>
+          <div style="flex:1;"><div class="card-title">${p.nome}</div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:4px;background:${sc}15;color:${sc};">${p.status||'planejado'}</span></div>
+          ${_del(`PROJ.produtos.splice(${pi},1)`)}
+        </div>
+      </div>`;}).join('') || _empty('📦','Nenhum produto');
+  }
+
+  else if(TAB==='orcamento'){
+    const orca=PROJ.orcamento||[];
+    const rec=orca.filter(o=>o.tipo==='entrada').reduce((s,o)=>s+Number(o.val||0),0);
+    const des=orca.filter(o=>o.tipo==='saida').reduce((s,o)=>s+Number(o.val||0),0);
+    const sal=rec-des;
+    const fmt=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+        ${[{l:'Receita',v:fmt(rec),c:'#00FF88'},{l:'Despesa',v:fmt(des),c:'#FF4B6E'},{l:'Saldo',v:fmt(sal),c:sal>=0?'#00FF88':'#FF4B6E'}].map(s=>`
+          <div style="background:rgba(13,17,23,.9);border:1px solid rgba(250,204,21,.1);border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:700;color:${s.c};">${s.v}</div>
+            <div style="font-size:.58rem;font-weight:700;color:#6B7280;text-transform:uppercase;margin-top:3px;">${s.l}</div>
+          </div>`).join('')}
+      </div>
+      ${orca.map((o,oi)=>`
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="flex:1;"><div class="card-title">${o.nome}</div><div class="card-sub">${o.cat||''}</div></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:700;color:${o.tipo==='entrada'?'#00FF88':'#FF4B6E'};">${o.tipo==='entrada'?'+':'-'}${fmt(Number(o.val||0))}</div>
+          ${_del(`PROJ.orcamento.splice(${oi},1)`)}
+        </div>`).join('') || _empty('💰','Nenhum lançamento')}`;
+  }
+
+  else if(TAB==='alunos'){
+    el.innerHTML = (PROJ.alunos||[]).map((a,ai)=>`
+      <div class="team-card">
+        <div class="team-av" style="background:#FF6B35;">${(a.nome||a)[0].toUpperCase()}</div>
+        <div style="flex:1;"><div class="team-name">${a.nome||a}</div>
+        <span class="team-role" style="background:rgba(255,107,53,.15);color:#FF6B35;">${a.tipo||'Bolsista'}</span>
+        ${a.bolsa?`<div style="font-size:.6rem;color:#6B7280;margin-top:2px;">Bolsa: ${a.bolsa}</div>`:''}
+        </div>${_del(`PROJ.alunos.splice(${ai},1)`)}</div>`).join('') || _empty('🎓','Nenhum aluno');
+  }
+
+  else if(TAB==='coletas'){
+    el.innerHTML = (PROJ.coletas||[]).map((c,ci)=>`
+      <div class="card" style="border-left:3px solid #00FF88;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="flex:1;"><div class="card-title">${c.local||c}</div>
+          ${c.data?`<div class="card-sub">${new Date(c.data).toLocaleDateString('pt-BR')}</div>`:''}
+          ${c.obs?`<div style="font-size:.7rem;color:#6B7280;margin-top:4px;">${c.obs}</div>`:''}
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:5px;background:${c.status==='realizada'?'rgba(0,255,136,.12)':'rgba(0,212,255,.1)'};color:${c.status==='realizada'?'#00FF88':'#00D4FF'};">${c.status||'planejada'}</span>
+          ${_del(`PROJ.coletas.splice(${ci},1)`)}
+        </div>
+      </div>`).join('') || _empty('🌿','Nenhuma coleta');
+  }
+
+  else if(TAB==='relatorios'){
+    el.innerHTML = (PROJ.relatorios||[]).map((r,ri)=>`
+      <div class="card" style="border-left:3px solid #FACC15;display:flex;gap:10px;align-items:center;">
+        <div style="font-size:1.4rem;">📋</div>
+        <div style="flex:1;"><div class="card-title">${r.nome||r}</div>
+        ${r.data?`<div class="card-sub">${r.data}</div>`:''}
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:4px;background:${r.status==='entregue'?'rgba(0,255,136,.1)':'rgba(250,204,21,.1)'};color:${r.status==='entregue'?'#00FF88':'#FACC15'};">${r.status||'pendente'}</span>
+        </div>${_del(`PROJ.relatorios.splice(${ri},1)`)}</div>`).join('') || _empty('📋','Nenhum relatório');
+  }
+
+  else if(TAB==='datas'){
+    const hoje=new Date();
+    el.innerHTML = `
+      ${canEdit?`<button onclick="addData()" style="width:100%;padding:10px;background:rgba(0,212,255,.05);border:1.5px dashed rgba(0,212,255,.2);border-radius:10px;font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:700;color:rgba(0,212,255,.6);cursor:pointer;margin-bottom:10px;">+ Data importante</button>`:''}
+      ${(PROJ.dates||[]).map((d,di)=>{
+        const dias=Math.ceil((new Date(d.v)-hoje)/(1000*60*60*24));
+        const passado=dias<0,urgente=!passado&&dias<=14;
+        const c=passado?'#6B7280':urgente?'#FF6B35':'#00D4FF';
+        return `<div class="card" style="border-left:3px solid ${c};display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="flex:1;"><div class="card-title">${d.l}</div>
+          <div class="card-sub">${new Date(d.v).toLocaleDateString('pt-BR')}</div></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;color:${c};">${passado?'passou':urgente?`⚠️ ${dias}d`:`${dias}d`}</div>
+          ${_del(`PROJ.dates.splice(${di},1)`)}
+        </div>`;}).join('') || _empty('🔔','Nenhuma data')}`;
+  }
+
+  else if(TAB==='notas'){
+    el.innerHTML = `
+      <div class="card" style="white-space:pre-wrap;font-size:.82rem;color:#C9D1D9;line-height:1.6;">${PROJ.notes||'<span style="color:#6B7280;">Sem notas</span>'}</div>
+      ${canEdit?`<textarea id="notes-edit" style="width:100%;padding:12px;background:rgba(0,0,0,.4);border:1px solid rgba(0,212,255,.15);border-radius:10px;color:#E8EAED;font-family:'Outfit',sans-serif;font-size:.84rem;min-height:120px;resize:vertical;outline:none;margin-top:8px;">${PROJ.notes||''}</textarea>
+      <button onclick="PROJ.notes=document.getElementById('notes-edit').value;saveProject();renderContent();" style="width:100%;padding:11px;background:linear-gradient(135deg,#0EA5E9,#00D4FF);color:#050810;border:none;border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:8px;">💾 Salvar notas</button>`:''}`;
+  }
+}
+
+// ── EDIT ACTIONS (only when perm=edit) ──
+function addMeta(){
+  if(PERM!=='edit') return;
+  const txt=prompt('Descrição da meta:'); if(!txt?.trim()) return;
+  const due=prompt('Prazo (AAAA-MM-DD) — opcional:');
+  if(!PROJ.metas) PROJ.metas=[];
+  PROJ.metas.push({name:txt.trim(),pct:0,due:due||''});
+  saveProject(); renderContent(); renderHeader();
+}
+function toggleMeta(mi){
+  if(PERM!=='edit') return;
+  PROJ.metas[mi].pct = PROJ.metas[mi].pct>=100?0:100;
+  saveProject(); renderContent(); renderHeader();
+}
+function addMembro(){
+  if(PERM!=='edit') return;
+  const nome=prompt('Nome:'); if(!nome?.trim()) return;
+  const papel=prompt('Papel:','Membro')||'Membro';
+  if(!PROJ.team) PROJ.team=[];
+  PROJ.team.push(`${nome.trim()} — ${papel}`);
+  saveProject(); renderContent();
+}
+function addData(){
+  if(PERM!=='edit') return;
+  const l=prompt('Descrição:'); if(!l?.trim()) return;
+  const v=prompt('Data (AAAA-MM-DD):'); if(!v) return;
+  if(!PROJ.dates) PROJ.dates=[];
+  PROJ.dates.push({l:l.trim(),v,s:'ok'});
+  saveProject(); renderContent();
+}
+
+// ── TOAST ──
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2200);
+}
+
+// ── BACKGROUND PARTICLES ──
+function initBg(){
+  const canvas=document.getElementById('bg');
+  const ctx=canvas.getContext('2d');
+  let W,H,pts;
+  const COLORS=['#00D4FF','#00FF88','#A855F7','#FF6B35','#FACC15'];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  function init(){pts=Array.from({length:35},(_,i)=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2.5+.8,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,color:COLORS[i%COLORS.length],alpha:Math.random()*.35+.15,pulse:Math.random()*Math.PI*2,ps:Math.random()*.015+.005}));}
+  function hex2rgba(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return `rgba(${r},${g},${b},${a.toFixed(2)})`;}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#050810'; ctx.fillRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.pulse+=p.ps;
+      const a=p.alpha+Math.sin(p.pulse)*.1,r=p.r+Math.sin(p.pulse*.6)*.3;
+      const glow=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*4);
+      glow.addColorStop(0,hex2rgba(p.color,a*.5)); glow.addColorStop(1,hex2rgba(p.color,0));
+      ctx.beginPath();ctx.arc(p.x,p.y,r*4,0,Math.PI*2);ctx.fillStyle=glow;ctx.fill();
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=hex2rgba(p.color,a);ctx.fill();
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<-10)p.x=W+10;if(p.x>W+10)p.x=-10;if(p.y<-10)p.y=H+10;if(p.y>H+10)p.y=-10;
+    });
+    requestAnimationFrame(draw);
+  }
+  resize();init();draw();
+  window.addEventListener('resize',()=>{resize();init();});
+}
+</script>
+</body>
+</html>

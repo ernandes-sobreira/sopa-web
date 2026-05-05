@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOPA">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ernandes Sobreira Oliveira Junior — Pesquisador · UNEMAT</title>
+<meta name="description" content="Professor e pesquisador na UNEMAT, Cáceres-MT. Biólogo, doutor pela Radboud University. Especialista em biogeoquímica aquática, Pantanal e mudanças climáticas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#0D1117;
+  --ink2:#374151;
+  --muted:#6B7280;
+  --faint:#9CA3AF;
+  --bg:#FAFAF8;
+  --paper:#FFFFFF;
+  --line:#E5E7EB;
+  --line2:#F3F4F6;
+  --blue:#1447A0;
+  --blue-l:#EFF6FF;
+  --green:#0A6640;
+  --orange:#C44B0A;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --mono:'DM Mono',monospace;
+}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  font-family:var(--sans);
+  color:var(--ink);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── LAYOUT ── */
+.page{max-width:760px;margin:0 auto;padding:0 20px 80px;}
+
+/* ── HEADER ── */
+header{
+  padding:52px 0 44px;
+  border-bottom:2px solid var(--ink);
+  margin-bottom:0;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:28px;
+  align-items:start;
+}
+.avatar{
+  width:88px;height:88px;border-radius:4px;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:2.2rem;font-weight:700;color:#fff;
+  flex-shrink:0;letter-spacing:-.02em;
+  position:relative;overflow:hidden;
+}
+.avatar::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,#1447A0 0%,#0D1117 100%);
+  opacity:.85;
+}
+.avatar span{position:relative;z-index:1;}
+.header-text{}
+.name{
+  font-family:var(--serif);
+  font-size:2.4rem;
+  font-weight:700;
+  line-height:1.1;
+  letter-spacing:-.02em;
+  color:var(--ink);
+  margin-bottom:6px;
+}
+.title-line{
+  font-size:.82rem;
+  font-weight:500;
+  color:var(--muted);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+.header-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.badge{
+  font-family:var(--mono);
+  font-size:.6rem;font-weight:500;
+  padding:3px 9px;border-radius:3px;
+  background:var(--line2);color:var(--ink2);
+  letter-spacing:.04em;
+  border:1px solid var(--line);
+}
+.badge.blue{background:var(--blue-l);color:var(--blue);border-color:#BFDBFE;}
+.header-links{display:flex;gap:12px;flex-wrap:wrap;}
+.hlink{
+  font-size:.72rem;font-weight:600;color:var(--blue);
+  text-decoration:none;display:flex;align-items:center;gap:4px;
+  transition:opacity .15s;
+}
+.hlink:hover{opacity:.7;}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(250,250,248,.94);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  padding:0;
+  margin:0 -20px;
+  overflow-x:auto;scrollbar-width:none;
+}
+nav::-webkit-scrollbar{display:none;}
+.nav-inner{
+  display:flex;gap:0;
+  max-width:760px;margin:0 auto;padding:0 20px;
+}
+.nav-link{
+  font-family:var(--mono);
+  font-size:.62rem;font-weight:500;letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--muted);text-decoration:none;
+  padding:12px 14px;
+  border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .15s;
+}
+.nav-link:hover,.nav-link.on{color:var(--ink);border-bottom-color:var(--ink);}
+
+/* ── SECTIONS ── */
+section{padding:40px 0;border-bottom:1px solid var(--line);}
+section:last-child{border-bottom:none;}
+
+.sec-label{
+  font-family:var(--mono);
+  font-size:.58rem;font-weight:500;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);
+  margin-bottom:20px;
+  display:flex;align-items:center;gap:12px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* ── BIO ── */
+.bio-text{
+  font-family:var(--serif);
+  font-size:1.18rem;
+  line-height:1.65;
+  color:var(--ink2);
+  margin-bottom:22px;
+  font-style:italic;
+}
+.bio-normal{
+  font-size:.88rem;
+  line-height:1.7;
+  color:var(--ink2);
+  margin-bottom:20px;
+}
+.stats-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:24px;
+}
+.stat-box{
+  background:var(--paper);
+  padding:16px 12px;
+  text-align:center;
+}
+.stat-n{
+  font-family:var(--mono);
+  font-size:1.5rem;font-weight:500;
+  color:var(--ink);display:block;
+  line-height:1;margin-bottom:5px;
+}
+.stat-l{
+  font-size:.62rem;font-weight:500;
+  color:var(--faint);letter-spacing:.06em;text-transform:uppercase;
+}
+
+/* ── RESEARCH LINES ── */
+.lines-grid{display:flex;flex-direction:column;gap:10px;}
+.line-item{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:12px 14px;
+  background:var(--paper);border:1px solid var(--line);border-radius:6px;
+}
+.line-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;
+}
+.line-title{font-size:.88rem;font-weight:600;color:var(--ink);margin-bottom:2px;}
+.line-sub{font-size:.75rem;color:var(--muted);}
+
+/* ── ARTICLES ── */
+.articles-list{display:flex;flex-direction:column;gap:0;}
+.article-item{
+  padding:18px 0;
+  border-bottom:1px solid var(--line2);
+  display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;
+}
+.article-item:last-child{border-bottom:none;}
+.art-year{
+  font-family:var(--mono);font-size:.72rem;font-weight:500;
+  color:var(--blue);
+  background:var(--blue-l);
+  padding:4px 8px;border-radius:3px;
+  white-space:nowrap;letter-spacing:.03em;flex-shrink:0;
+}
+.art-title{
+  font-family:var(--serif);
+  font-size:1.02rem;font-weight:600;
+  line-height:1.35;color:var(--ink);
+  margin-bottom:4px;
+}
+.art-journal{
+  font-size:.72rem;color:var(--muted);font-weight:500;
+  margin-bottom:5px;
+  font-style:italic;
+}
+.art-doi{
+  font-family:var(--mono);font-size:.62rem;
+  color:var(--blue);text-decoration:none;
+}
+.art-doi:hover{text-decoration:underline;}
+
+/* ── PLATFORMS ── */
+.platforms-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:500px){.platforms-grid{grid-template-columns:1fr;}}
+.plat-card{
+  background:var(--paper);border:1px solid var(--line);border-radius:6px;
+  padding:16px;text-decoration:none;color:inherit;
+  transition:border-color .15s, box-shadow .15s;
+  display:block;
+}
+.plat-card:hover{border-color:var(--blue);box-shadow:0 2px 12px rgba(20,71,160,.08);}
+.plat-tag{
+  font-family:var(--mono);font-size:.55rem;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:8px;
+}
+.plat-name{font-size:.9rem;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.plat-desc{font-size:.75rem;color:var(--muted);line-height:1.5;}
+.plat-link{
+  font-family:var(--mono);font-size:.6rem;color:var(--blue);
+  margin-top:10px;display:flex;align-items:center;gap:4px;
+}
+
+/* ── CONTACT ── */
+.contact-grid{display:flex;flex-direction:column;gap:8px;}
+.contact-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;
+  background:var(--paper);border:1px solid var(--line);border-radius:6px;
+}
+.contact-icon{width:28px;text-align:center;font-size:1rem;flex-shrink:0;}
+.contact-label{font-size:.65rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);display:block;}
+.contact-val{font-size:.82rem;font-weight:500;color:var(--ink2);}
+.contact-link{text-decoration:none;color:var(--blue);}
+.contact-link:hover{text-decoration:underline;}
+
+/* ── FOOTER ── */
+footer{
+  margin-top:40px;padding:20px 0;
+  border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:8px;
+}
+.footer-note{font-family:var(--mono);font-size:.58rem;color:var(--faint);letter-spacing:.04em;}
+
+/* ── PRINT ── */
+@media print{
+  nav{display:none;}
+  header{padding:24px 0;}
+  .page{padding:0 0 20px;}
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .5s ease both;}
+.fade-up:nth-child(1){animation-delay:.05s}
+.fade-up:nth-child(2){animation-delay:.1s}
+.fade-up:nth-child(3){animation-delay:.15s}
+.fade-up:nth-child(4){animation-delay:.2s}
+.fade-up:nth-child(5){animation-delay:.25s}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="avatar" style="background:none;overflow:hidden;">
+  <img src="data:image/jpeg;base64,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" alt="Ernandes Sobreira" style="width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:4px;position:relative;z-index:1;">
+</div>
+  <div class="header-text">
+    <h1 class="name">Ernandes Sobreira<br>Oliveira Junior</h1>
+    <div class="title-line">Prof. Dr. · Biólogo · Pesquisador</div>
+    <div class="header-badges">
+      <span class="badge blue">UNEMAT — Cáceres, MT</span>
+      <span class="badge">Radboud University PhD</span>
+      <span class="badge">UNESCO Consultant</span>
+      <span class="badge">CNPq Researcher</span>
+    </div>
+    <div class="header-links">
+      <a class="hlink" href="http://lattes.cnpq.br/7461346615427709" target="_blank">↗ Lattes</a>
+      <a class="hlink" href="https://orcid.org/0000-0001-6175-4364" target="_blank">↗ ORCID</a>
+      <a class="hlink" href="https://scholar.google.com/citations?user=ernandes" target="_blank">↗ Google Scholar</a>
+      <a class="hlink" href="mailto:ernandes.sobreira@unemat.br">✉ E-mail</a>
+    </div>
+  </div>
+</header>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-link on" href="#bio">Bio</a>
+    <a class="nav-link" href="#pesquisa">Pesquisa</a>
+    <a class="nav-link" href="#artigos">Artigos</a>
+    <a class="nav-link" href="#plataformas">Plataformas</a>
+    <a class="nav-link" href="#contato">Contato</a>
+  </div>
+</nav>
+
+<!-- ── BIO ── -->
+<section id="bio">
+  <div class="sec-label">Sobre</div>
+  <p class="bio-text">"Pesquisador comprometido com a ciência dos ecossistemas aquáticos, a biogeoquímica do Pantanal e os desafios das mudanças climáticas no Brasil Central."</p>
+  <p class="bio-normal">Professor e pesquisador associado da <strong>UNEMAT — Universidade do Estado de Mato Grosso</strong>, Campus Cáceres-MT, atuando nos programas de pós-graduação PPGCA e ProfAgua. Biólogo com doutorado pela <strong>Radboud University</strong> (Nijmegen, Holanda). Consultor da <strong>UNESCO</strong> no projeto de cooperação Sul-Sul em recursos hídricos (SA-1383/2025). Coordena a empresa de consultoria ambiental <strong>Japuira</strong> e o projeto de extensão <strong>Transforma-Ações</strong>.</p>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <span class="stat-n">102</span>
+      <span class="stat-l">Artigos</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-n">85</span>
+      <span class="stat-l">Orientações</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-n">27</span>
+      <span class="stat-l">Projetos</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-n">98</span>
+      <span class="stat-l">Bancas</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── LINHAS DE PESQUISA ── -->
+<section id="pesquisa">
+  <div class="sec-label">Linhas de Pesquisa</div>
+  <div class="lines-grid">
+    <div class="line-item fade-up">
+      <div class="line-dot" style="background:#1447A0"></div>
+      <div>
+        <div class="line-title">Biogeoquímica Aquática & Emissões de GEE</div>
+        <div class="line-sub">Fluxos de CO₂ e CH₄ em ecossistemas aquáticos do Pantanal, Amazônia e Cerrado</div>
+      </div>
+    </div>
+    <div class="line-item fade-up">
+      <div class="line-dot" style="background:#0A6640"></div>
+      <div>
+        <div class="line-title">Ecologia do Pantanal & Mudanças Climáticas</div>
+        <div class="line-sub">Incêndios, qualidade da água, bioindicadores e impactos antrópicos no maior wetland do mundo</div>
+      </div>
+    </div>
+    <div class="line-item fade-up">
+      <div class="line-dot" style="background:#C44B0A"></div>
+      <div>
+        <div class="line-title">Saúde Ambiental & Epidemiologia</div>
+        <div class="line-sub">PM2.5, mercúrio, mortalidade cardiovascular e respiratória em municípios brasileiros</div>
+      </div>
+    </div>
+    <div class="line-item fade-up">
+      <div class="line-dot" style="background:#5B21B6"></div>
+      <div>
+        <div class="line-title">Tecnologia & Plataformas Educacionais</div>
+        <div class="line-sub">Desenvolvimento de sistemas open-source para gestão de recursos hídricos e educação científica</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ARTIGOS ── -->
+<section id="artigos">
+  <div class="sec-label">Publicações Recentes — Seleção</div>
+  <div class="articles-list">
+
+    <div class="article-item fade-up">
+      <span class="art-year">2026</span>
+      <div>
+        <div class="art-title">Net CO₂ Emissions From Dry Inland Waters Persist in the Presence of Vegetation</div>
+        <div class="art-journal">Global Biogeochemical Cycles</div>
+        <a class="art-doi" href="https://doi.org/10.1029/2025gb008801" target="_blank">↗ 10.1029/2025gb008801</a>
+      </div>
+    </div>
+
+    <div class="article-item fade-up">
+      <span class="art-year">2025</span>
+      <div>
+        <div class="art-title">Wildfire Ashes: Evaluating Threats on the Pantanal Wetland Reserve (Mato Grosso, Brazil) Using Ecotoxicologia</div>
+        <div class="art-journal">Environmental Science and Pollution Research</div>
+        <a class="art-doi" href="https://doi.org/10.1007/s11356-025-35892-9" target="_blank">↗ 10.1007/s11356-025-35892-9</a>
+      </div>
+    </div>
+
+    <div class="article-item fade-up">
+      <span class="art-year">2025</span>
+      <div>
+        <div class="art-title">Panorama Global das Pesquisas sobre Crédito de Carbono: da Semente aos Ventos</div>
+        <div class="art-journal">Observatorio de la Economía Latinoamericana</div>
+        <a class="art-doi" href="https://doi.org/10.55905/oelv23n1-031" target="_blank">↗ 10.55905/oelv23n1-031</a>
+      </div>
+    </div>
+
+    <div class="article-item fade-up">
+      <span class="art-year">2024</span>
+      <div>
+        <div class="art-title">Wildfires and Their Toll on Brazil: Who's Counting the Cost?</div>
+        <div class="art-journal">Perspectives in Ecology and Conservation</div>
+        <a class="art-doi" href="#" target="_blank">Perspectives in Ecology & Conservation · 2024</a>
+      </div>
+    </div>
+
+    <div class="article-item fade-up">
+      <span class="art-year">2020</span>
+      <div>
+        <div class="art-title">Greenhouse Gas Emissions from Tropical Inland Waters</div>
+        <div class="art-journal">Nature Geoscience</div>
+        <a class="art-doi" href="#" target="_blank">Nature Geoscience · 2020</a>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:18px;">
+    <a href="http://lattes.cnpq.br/7461346615427709" target="_blank"
+      style="font-family:var(--mono);font-size:.65rem;color:var(--blue);text-decoration:none;font-weight:500;">
+      Ver produção completa no Lattes ↗ &nbsp;(102 artigos publicados)
+    </a>
+  </div>
+</section>
+
+<!-- ── PLATAFORMAS ── -->
+<section id="plataformas">
+  <div class="sec-label">Plataformas & Sistemas Desenvolvidos</div>
+  <div class="platforms-grid">
+
+    <a class="plat-card fade-up" href="https://ernandes-sobreira.github.io/decide-crida/" target="_blank">
+      <div class="plat-tag">Gestão Hídrica</div>
+      <div class="plat-name">DECIDE CRIDA</div>
+      <div class="plat-desc">Plataforma interativa para análise de risco e tomada de decisão em comitês de bacia hidrográfica</div>
+      <div class="plat-link">↗ Acessar plataforma</div>
+    </a>
+
+    <a class="plat-card fade-up" href="https://ernandes-sobreira.github.io/decide-bacia/" target="_blank">
+      <div class="plat-tag">Educação</div>
+      <div class="plat-name">DECIDE BACIA</div>
+      <div class="plat-desc">Laboratório virtual de bacias hidrográficas com dados reais do Rio Paraguai em Cáceres-MT</div>
+      <div class="plat-link">↗ Acessar plataforma</div>
+    </a>
+
+    <a class="plat-card fade-up" href="#" target="_blank">
+      <div class="plat-tag">Biogeoquímica</div>
+      <div class="plat-name">CARBON-U</div>
+      <div class="plat-desc">Sistema para estimativa de estoques e fluxos de carbono em áreas tropicais (INPI registrado)</div>
+      <div class="plat-link">↗ Software registrado · INPI</div>
+    </a>
+
+    <a class="plat-card fade-up" href="#" target="_blank">
+      <div class="plat-tag">Ensino</div>
+      <div class="plat-name">Mudanças Climáticas EaD</div>
+      <div class="plat-desc">Curso autoinstrucional em gestão de recursos hídricos e mudanças climáticas — ANA/UNESCO/ABC</div>
+      <div class="plat-link">↗ Projeto UNESCO SA-1383/2025</div>
+    </a>
+
+  </div>
+</section>
+
+<!-- ── CONTATO ── -->
+<section id="contato">
+  <div class="sec-label">Contato</div>
+  <div class="contact-grid">
+    <div class="contact-row">
+      <div class="contact-icon">✉</div>
+      <div>
+        <span class="contact-label">E-mail institucional</span>
+        <a class="contact-val contact-link" href="mailto:ernandes.sobreira@unemat.br">ernandes.sobreira@unemat.br</a>
+      </div>
+    </div>
+    <div class="contact-row">
+      <div class="contact-icon">🏛</div>
+      <div>
+        <span class="contact-label">Instituição</span>
+        <span class="contact-val">UNEMAT — Campus Cáceres · Mato Grosso, Brasil</span>
+      </div>
+    </div>
+    <div class="contact-row">
+      <div class="contact-icon">🔬</div>
+      <div>
+        <span class="contact-label">Lattes ID</span>
+        <a class="contact-val contact-link" href="http://lattes.cnpq.br/7461346615427709" target="_blank">7461346615427709</a>
+      </div>
+    </div>
+    <div class="contact-row">
+      <div class="contact-icon">🌐</div>
+      <div>
+        <span class="contact-label">Consultoria Ambiental</span>
+        <span class="contact-val">Japuira Consultoria Ambiental · Cáceres-MT</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span class="footer-note">Ernandes Sobreira Oliveira Junior · UNEMAT Cáceres · 2026</span>
+  <span class="footer-note">Dados extraídos do Currículo Lattes · CNPq</span>
+</footer>
+
+</div>
+
+<script>
+// Active nav on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      navLinks.forEach(l=>l.classList.remove('on'));
+      const active = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+      if(active) active.classList.add('on');
+    }
+  });
+}, {threshold:.3});
+
+sections.forEach(s=>obs.observe(s));
+
+// Smooth scroll for nav
+navLinks.forEach(l=>{
+  l.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(l.getAttribute('href'));
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+</script>
+</body>
+</html>

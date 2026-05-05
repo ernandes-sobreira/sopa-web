@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOPA">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOPA Aluno</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#050810;--w:#0D1117;--ink:#E8EAED;--ink2:#C9D1D9;
+  --mu:#6B7280;--bd:#21262D;--bg2:#161B22;
+  --acc:#00D4FF;--acc2:#0EA5E9;--accl:#0D1B2A;
+  --green:#00FF88;--orange:#FF6B35;--purple:#A855F7;
+  --ff:'Outfit',sans-serif;--fm:'JetBrains Mono',monospace;
+  --rr:14px;
+}
+html,body{height:100%;overflow-x:hidden;}
+body{background:var(--bg);font-family:var(--ff);color:var(--ink);-webkit-font-smoothing:antialiased;}
+#universe-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.sc,.topbar,.botnav,.modal-overlay,.toast{position:relative;z-index:1;}
+
+/* ── SCREENS ── */
+.sc{display:none;}.sc.on{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.sc.on{animation:fadeUp .2s ease;}
+
+/* ── LOGIN ── */
+.login-wrap{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px;
+  background:#050810;
+}
+.login-card{
+  background:rgba(13,17,23,.95);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:32px 28px;
+  width:100%;max-width:400px;
+  box-shadow:0 0 60px rgba(0,212,255,.1),0 20px 60px rgba(0,0,0,.5);
+}
+.login-logo{
+  font-size:2rem;font-weight:800;letter-spacing:.08em;
+  text-align:center;margin-bottom:4px;
+  color:#00D4FF;text-shadow:0 0 20px rgba(0,212,255,.5);
+  font-family:var(--fm);
+}
+.login-sub{font-size:.78rem;color:#6B7280;text-align:center;margin-bottom:24px;font-family:var(--fm);letter-spacing:.06em;}
+.login-badge{
+  display:block;background:rgba(0,212,255,.08);color:#00D4FF;
+  font-size:.6rem;font-weight:700;padding:3px 10px;border-radius:20px;
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;
+  text-align:center;font-family:var(--fm);
+  border:1px solid rgba(0,212,255,.2);
+}
+.btn-google{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:13px;border-radius:12px;border:1px solid rgba(0,212,255,.3);
+  background:rgba(0,212,255,.08);cursor:pointer;font-family:var(--ff);font-size:.88rem;font-weight:600;
+  color:#E8EAED;transition:all .15s;
+}
+.btn-google:hover{background:rgba(0,212,255,.15);border-color:rgba(0,212,255,.5);}
+.btn-google img{width:20px;height:20px;}
+.btn-local{
+  width:100%;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);cursor:pointer;font-family:var(--ff);
+  font-size:.8rem;font-weight:600;color:#6B7280;margin-top:8px;
+  transition:all .15s;
+}
+.btn-local:hover{background:rgba(255,255,255,.08);}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:80;
+  background:rgba(5,8,16,.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(0,212,255,.15);
+  height:52px;display:flex;align-items:center;
+  padding:0 16px;gap:10px;
+}
+.topbar-logo{font-weight:800;font-size:1rem;letter-spacing:.06em;color:var(--ink);}
+.topbar-logo span{color:var(--acc);}
+.topbar-name{font-size:.72rem;color:var(--mu);font-weight:500;flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-av{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--acc);color:#fff;font-weight:700;font-size:.8rem;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;overflow:hidden;flex-shrink:0;
+}
+.topbar-av img{width:100%;height:100%;object-fit:cover;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+
+/* ── BOTTOM NAV ── */
+.botnav{
+  position:fixed;bottom:0;left:0;right:0;z-index:80;
+  background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-top:1px solid rgba(0,212,255,.15);
+  display:flex;align-items:center;
+  padding:6px 0 max(6px,env(safe-area-inset-bottom));
+}
+.bn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:4px 0;cursor:pointer;border:none;background:none;
+  font-family:var(--ff);transition:all .15s;
+}
+.bn-icon{font-size:1.3rem;line-height:1;}
+.bn-label{font-size:.52rem;font-weight:600;color:#4B5563;letter-spacing:.03em;text-transform:uppercase;}
+.bn.on .bn-label{color:#00D4FF;text-shadow:0 0 8px rgba(0,212,255,.6);}
+.bn.on .bn-icon{transform:scale(1.1);}
+
+/* ── WRAPPER ── */
+.wr{padding:14px 14px 90px;max-width:680px;margin:0 auto;}
+
+/* ── HEADER CARD ── */
+.profile-hero{
+  background:linear-gradient(135deg,#050810 0%,#0D1B2A 50%,#0A1628 100%);
+  border:1px solid rgba(0,212,255,.2);
+  box-shadow:0 0 40px rgba(0,212,255,.08),inset 0 0 60px rgba(0,212,255,.03);
+  border-radius:16px;padding:24px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+}
+.profile-hero::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:120px;height:120px;border-radius:50%;
+  background:rgba(255,255,255,.05);
+}
+.ph-av{
+  width:68px;height:68px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:2.5px solid rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;font-weight:700;color:#fff;
+  margin-bottom:12px;overflow:hidden;cursor:pointer;
+  position:relative;
+}
+.ph-av::after{
+  content:'📷';position:absolute;bottom:-2px;right:-2px;
+  width:22px;height:22px;border-radius:50%;background:#fff;
+  font-size:.65rem;display:flex;align-items:center;justify-content:center;
+  border:1.5px solid rgba(255,255,255,.5);
+}
+.ph-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.ph-name{font-size:1.15rem;font-weight:700;color:#fff;margin-bottom:2px;}
+.ph-role{font-size:.72rem;color:rgba(255,255,255,.7);margin-bottom:10px;}
+.ph-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.ph-tag{
+  font-size:.6rem;font-weight:600;padding:3px 10px;border-radius:20px;
+  background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);
+  letter-spacing:.04em;
+}
+.ph-share{
+  position:absolute;top:16px;right:16px;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);
+  border-radius:8px;padding:6px 12px;
+  font-size:.65rem;font-weight:700;color:#fff;cursor:pointer;
+  font-family:var(--ff);transition:all .15s;
+}
+.ph-share:hover{background:rgba(255,255,255,.25);}
+
+/* ── SECTION TITLE ── */
+.sec-title{
+  font-size:.6rem;font-weight:800;letter-spacing:.12em;
+  text-transform:uppercase;color:rgba(0,212,255,.5);
+  margin:18px 0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-title::after{content:'';flex:1;height:1px;background:rgba(0,212,255,.1);}
+.sec-action{
+  font-size:.65rem;font-weight:700;color:var(--acc);cursor:pointer;
+  background:none;border:none;font-family:var(--ff);padding:2px 0;
+}
+
+/* ── META CARD ── */
+.meta-card{
+  background:rgba(13,17,23,.9);border:1px solid rgba(0,212,255,.12);border-radius:12px;
+  backdrop-filter:blur(8px);
+  padding:12px 14px;margin-bottom:8px;
+  display:flex;gap:10px;align-items:flex-start;
+  transition:box-shadow .15s;
+}
+.meta-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
+.meta-check{
+  width:22px;height:22px;border-radius:6px;border:2px solid var(--bd);
+  flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  margin-top:1px;transition:all .15s;
+}
+.meta-check.done{background:var(--green);border-color:var(--green);color:#fff;font-size:.75rem;}
+.meta-check.pending-ap{background:#FEF3C7;border-color:#F59E0B;color:#F59E0B;font-size:.65rem;}
+.meta-body{flex:1;min-width:0;}
+.meta-txt{font-size:.85rem;font-weight:600;color:var(--ink);line-height:1.4;}
+.meta-txt.done{text-decoration:line-through;opacity:.5;}
+.meta-due{font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:3px;}
+.meta-status-badge{
+  font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:5px;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+
+/* ── REUNION CARD ── */
+.meet-card{
+  background:rgba(13,17,23,.9);border:1px solid rgba(0,212,255,.12);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;
+  border-left:3px solid #00D4FF;backdrop-filter:blur(8px);
+}
+.meet-dt{font-family:var(--fm);font-size:.62rem;color:var(--mu);margin-bottom:4px;}
+.meet-title{font-size:.86rem;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.meet-notes{font-size:.75rem;color:var(--ink2);line-height:1.5;}
+.meet-from{font-size:.6rem;color:var(--mu);margin-top:4px;font-style:italic;}
+
+/* ── FILE CARD ── */
+.file-card{
+  background:rgba(13,17,23,.9);border:1px solid rgba(0,212,255,.12);border-radius:12px;
+  backdrop-filter:blur(8px);
+  padding:11px 13px;margin-bottom:8px;
+  display:flex;gap:10px;align-items:center;
+  transition:box-shadow .15s;
+}
+.file-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
+.file-icon{
+  width:38px;height:38px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;flex-shrink:0;
+}
+.file-name{font-size:.82rem;font-weight:600;color:var(--ink);}
+.file-meta{font-size:.62rem;color:var(--mu);margin-top:2px;}
+.file-cat{
+  font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:5px;
+  letter-spacing:.04em;margin-top:4px;display:inline-block;
+}
+
+/* ── ARTICLE CARD ── */
+.art-card{
+  background:rgba(13,17,23,.9);border:1px solid rgba(168,85,247,.2);border-radius:12px;
+  padding:13px 14px;margin-bottom:8px;
+  border-left:3px solid var(--purple);
+}
+.art-status{
+  font-family:var(--fm);font-size:.58rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;
+}
+.art-title{font-size:.88rem;font-weight:700;color:var(--ink);line-height:1.4;margin-bottom:4px;}
+.art-journal{font-size:.72rem;color:var(--mu);font-style:italic;}
+
+/* ── PROJECT CARD ── */
+.proj-card{
+  background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(0,255,136,.04));
+  border:1px solid rgba(0,212,255,.2);border-radius:14px;
+  padding:16px;margin-bottom:8px;
+}
+.proj-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:6px;}
+.proj-title{font-size:.9rem;font-weight:700;color:var(--ink);margin-bottom:4px;line-height:1.3;}
+.proj-orientador{font-size:.72rem;color:var(--mu);}
+
+/* ── ADD BUTTON ── */
+.add-btn{
+  width:100%;padding:11px;border-radius:10px;
+  background:rgba(0,212,255,.05);border:1.5px dashed rgba(0,212,255,.25);
+  font-family:var(--ff);font-size:.78rem;font-weight:700;
+  color:rgba(0,212,255,.6);cursor:pointer;margin-bottom:10px;
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.add-btn:hover{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.5);color:#00D4FF;}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(13,17,23,.5);
+  display:none;align-items:flex-end;
+}
+.modal-overlay.on{display:flex;}
+.modal-sheet{
+  background:#0D1117;border-top:1px solid rgba(0,212,255,.2);width:100%;max-height:90vh;
+  border-radius:20px 20px 0 0;overflow-y:auto;
+  animation:slideUp .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 -20px 60px rgba(0,0,0,.8);
+}
+@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:40px;height:3px;background:rgba(0,212,255,.3);border-radius:2px;margin:10px auto 0;}
+.modal-head{padding:14px 18px 10px;border-bottom:1px solid rgba(0,212,255,.1);}
+.modal-title{font-size:1rem;font-weight:700;color:#00D4FF;font-family:var(--fm);letter-spacing:.04em;}
+.modal-body{padding:16px 18px 32px;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:.62rem;font-weight:700;color:var(--mu);letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:5px;}
+.form-input{
+  width:100%;padding:10px 13px;border:1px solid rgba(0,212,255,.15);border-radius:9px;
+  font-family:var(--ff);font-size:.86rem;color:#E8EAED;outline:none;
+  background:rgba(0,0,0,.3);
+  transition:border-color .15s,box-shadow .15s;
+}
+.form-input:focus{border-color:#00D4FF;box-shadow:0 0 0 3px rgba(0,212,255,.1);}
+.form-textarea{resize:vertical;min-height:80px;}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236B7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+.btn-save{
+  width:100%;padding:13px;background:linear-gradient(135deg,#0EA5E9,#00D4FF);
+  color:#050810;border:none;border-radius:10px;font-family:var(--fm);
+  font-size:.82rem;font-weight:700;cursor:pointer;letter-spacing:.04em;
+  transition:all .15s;
+  box-shadow:0 0 20px rgba(0,212,255,.3);
+}
+.btn-save:hover{box-shadow:0 0 30px rgba(0,212,255,.5);transform:translateY(-1px);}
+.btn-cancel{
+  width:100%;padding:10px;background:rgba(255,255,255,.04);color:#6B7280;
+  border:1px solid rgba(255,255,255,.08);border-radius:10px;font-family:var(--ff);
+  font-size:.82rem;font-weight:600;cursor:pointer;margin-top:8px;
+}
+
+/* ── PROFILE SCREEN ── */
+.profile-form{background:rgba(13,17,23,.9);border:1px solid rgba(0,212,255,.12);border-radius:14px;padding:16px;margin-bottom:12px;backdrop-filter:blur(8px);}
+.profile-form .form-label{margin-bottom:5px;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:#0D1117;color:#00D4FF;font-size:.72rem;font-weight:700;
+  padding:8px 18px;border-radius:20px;z-index:300;
+  opacity:0;transition:all .2s;pointer-events:none;white-space:nowrap;
+  border:1px solid rgba(0,212,255,.4);
+  box-shadow:0 0 20px rgba(0,212,255,.2);
+  font-family:var(--fm);
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── ORIENTADOR BADGE ── */
+.orient-badge{
+  background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;
+  padding:10px 14px;margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.orient-av{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--acc);color:#fff;font-size:.8rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.orient-info{flex:1;}
+.orient-label{font-size:.6rem;font-weight:700;color:var(--acc);letter-spacing:.06em;text-transform:uppercase;}
+.orient-name{font-size:.82rem;font-weight:600;color:var(--ink);}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:32px 16px;color:rgba(0,212,255,.3);}
+.empty-icon{font-size:2.5rem;opacity:.3;margin-bottom:8px;}
+.empty-txt{font-size:.82rem;font-weight:600;color:rgba(200,210,220,.6);}
+.empty-sub{font-size:.72rem;margin-top:4px;}
+
+/* ══ HOME GRAPH ══ */
+#home-graph-wrap{
+  position:fixed;
+  top:52px;left:0;right:0;
+  bottom:60px;
+  overflow:hidden;
+  cursor:grab;
+}
+#home-graph-wrap:active{cursor:grabbing;}
+#home-graph-wrap svg{width:100%;height:100%;}
+
+/* node menu popup */
+.node-menu{
+  position:fixed;
+  background:rgba(13,17,23,.97);
+  border:1px solid rgba(0,212,255,.35);
+  border-top:2px solid #00D4FF;
+  border-radius:0 0 14px 14px;
+  min-width:200px;
+  z-index:200;
+  overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.8), 0 0 20px rgba(0,212,255,.15);
+  animation:menuIn .18s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes menuIn{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes pulse-bg{0%{opacity:.5;transform:scale(1)}70%{opacity:0;transform:scale(1.4)}100%{opacity:0;transform:scale(1.4)}}
+.node-menu-title{
+  padding:8px 14px 6px;
+  font-family:var(--fm);font-size:.6rem;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:#00D4FF;border-bottom:1px solid rgba(0,212,255,.15);
+}
+.node-menu-item{
+  padding:11px 16px;font-size:.82rem;font-weight:600;
+  cursor:pointer;color:#C9D1D9;
+  display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  transition:background .1s;
+}
+.node-menu-item:last-child{border:none;}
+.node-menu-item:hover{background:rgba(0,212,255,.1);color:#00D4FF;}
+
+/* pulse animation for nodes */
+@keyframes pulse-node{
+  0%{opacity:.6;r:0px;}
+  70%{opacity:0;}
+  100%{opacity:0;}
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="universe-canvas"></canvas>
+
+<!-- ══ TELA LOGIN ══ -->
+<div id="s-login" class="sc on">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">S·O·P·A</div>
+      <div class="login-sub">Sistema do Orientando</div>
+      <div class="login-badge">Pós-graduação · UNEMAT</div>
+      <button class="btn-google" onclick="loginGoogle()">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234285F4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/%3E%3Cpath fill='%2334A853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/%3E%3Cpath fill='%23FBBC05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/%3E%3Cpath fill='%23EA4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/%3E%3C/svg%3E" alt="Google">
+        Entrar com Google
+      </button>
+      <button class="btn-local" onclick="loginLocal()">Acessar sem login (modo local)</button>
+      <p style="font-size:.62rem;color:var(--mu);text-align:center;margin-top:14px;line-height:1.6;">
+        Faça login para sincronizar seus dados com seu orientador
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TELA BLOQUEADA ══ -->
+<div id="s-blocked" class="sc" style="display:none;">
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#050810;">
+    <div style="background:rgba(13,17,23,.97);border:1px solid rgba(255,107,53,.3);border-radius:20px;padding:32px 28px;width:100%;max-width:400px;text-align:center;box-shadow:0 0 40px rgba(255,107,53,.08);">
+      <div style="font-size:2.5rem;margin-bottom:12px;">🔒</div>
+      <div style="font-family:var(--fm);font-size:1rem;font-weight:700;color:#FF6B35;margin-bottom:8px;letter-spacing:.06em;">ACESSO RESTRITO</div>
+      <div style="font-size:.8rem;color:#6B7280;line-height:1.6;margin-bottom:20px;">
+        Este sistema é exclusivo para orientandos convidados.<br>
+        Solicite o link de acesso ao seu orientador.
+      </div>
+      <div style="font-size:.7rem;color:rgba(255,107,53,.5);font-family:var(--fm);">Prof. Dr. Ernandes Sobreira · UNEMAT</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="s-app" class="sc" style="display:none;">
+
+  <!-- Topbar -->
+  <div class="topbar" id="topbar">
+    <div class="topbar-logo">S·<span>O</span>·P·A</div>
+    <div class="topbar-name" id="top-name">Aluno</div>
+    <div class="sync-dot" id="sync-dot" title="Firebase ativo"></div>
+    <div class="topbar-av" id="top-av" onclick="showScreen('perfil')">?</div>
+  </div>
+
+  <!-- Screens -->
+  <div id="sc-home"    class="sc on" style="position:fixed;inset:0;"><div id="home-body"></div></div>
+  <div id="sc-metas"   class="sc"><div class="wr" id="metas-body"></div></div>
+  <div id="sc-arquivos"class="sc"><div class="wr" id="arquivos-body"></div></div>
+  <div id="sc-artigos" class="sc"><div class="wr" id="artigos-body"></div></div>
+  <div id="sc-perfil"  class="sc"><div class="wr" id="perfil-body"></div></div>
+
+  <!-- Bottom nav -->
+  <nav class="botnav" id="botnav">
+    <button class="bn on" id="bn-home"     onclick="showScreen('home')">    <span class="bn-icon">🏠</span><span class="bn-label">Início</span></button>
+    <button class="bn"    id="bn-metas"    onclick="showScreen('metas')">   <span class="bn-icon">🎯</span><span class="bn-label">Metas</span></button>
+    <button class="bn"    id="bn-arquivos" onclick="showScreen('arquivos')"><span class="bn-icon">📁</span><span class="bn-label">Arquivos</span></button>
+    <button class="bn"    id="bn-artigos"  onclick="showScreen('artigos')"> <span class="bn-icon">📝</span><span class="bn-label">Artigos</span></button>
+    <button class="bn"    id="bn-perfil"   onclick="showScreen('perfil')">  <span class="bn-icon">👤</span><span class="bn-label">Perfil</span></button>
+  </nav>
+
+</div>
+
+<!-- ══ MODAL ══ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-head"><div class="modal-title" id="modal-title">—</div></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG (mesmo projeto sopa-fd8b8)
+// ══════════════════════════════════════════
+const FB_CFG = {
+  apiKey:"AIzaSyCSTBNmzHJE-vIw6jEjlOVE_9femj5n3k8",
+  authDomain:"sopa-fd8b8.firebaseapp.com",
+  projectId:"sopa-fd8b8",
+  storageBucket:"sopa-fd8b8.firebasestorage.app",
+  messagingSenderId:"200200690812",
+  appId:"1:200200690812:web:8b0e8e6e8b0e8e6e8b0e8e"
+};
+
+let app, auth, db, storage, FIREBASE_MODE = false;
+let currentUser = null;
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let STATE = {
+  perfil: {
+    nome:'', titulo:'', programa:'', orientador_email:'',
+    orientador_nome:'Prof. Dr. Ernandes Sobreira', tema:'',
+    lattes:'', orcid:'', email:'', bio:'', foto:''
+  },
+  metas:[],
+  reunioes:[],
+  arquivos:[],
+  artigos:[],
+};
+
+function saveLocal(){
+  try{ localStorage.setItem('sopa_aluno_state', JSON.stringify(STATE)); }catch(e){}
+}
+function loadLocal(){
+  try{
+    const s = localStorage.getItem('sopa_aluno_state');
+    if(s){ const p=JSON.parse(s); Object.assign(STATE, p); }
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════
+// FIREBASE INIT
+// ══════════════════════════════════════════
+function initFirebase(){
+  try{
+    app  = firebase.initializeApp(FB_CFG);
+    auth = firebase.auth();
+    db   = firebase.firestore();
+    storage = firebase.storage();
+    auth.onAuthStateChanged(user=>{
+      if(user){ FIREBASE_MODE=true; onLogin(user); }
+    });
+  }catch(e){ console.warn('Firebase:', e); }
+}
+
+function loginGoogle(){
+  if(!auth){ loginLocal(); return; }
+  const p = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).then(r=>onLogin(r.user)).catch(e=>{ toast('Erro: '+e.message); });
+}
+
+function loginLocal(){
+  // Local mode only works with invite code in URL
+  const params = new URLSearchParams(window.location.search);
+  const inviteCode = params.get('invite') || params.get('i') || '';
+  if(!inviteCode && !localStorage.getItem('sopa_aluno_autorizado_local')){
+    const blocked = document.getElementById('s-blocked');
+    if(blocked) blocked.style.display='flex';
+    document.getElementById('s-login').classList.remove('on');
+    return;
+  }
+  localStorage.setItem('sopa_aluno_autorizado_local','1');
+  currentUser = {uid:'local', displayName:'Aluno', email:'', photoURL:''};
+  loadLocal();
+  enterApp();
+}
+
+async function onLogin(user){
+  currentUser = user;
+  FIREBASE_MODE = true;
+  loadLocal();
+  // Load from Firestore
+  try{
+    const snap = await db.collection('alunos').doc(user.uid).get();
+    if(snap.exists) Object.assign(STATE, snap.data());
+    if(!STATE.perfil.nome && user.displayName) STATE.perfil.nome = user.displayName;
+  }catch(e){}
+
+  // ── CHECK ACCESS ──
+  const permitido = await checkAccess(user);
+  if(!permitido){
+    // Block access — show blocked screen
+    document.getElementById('s-login').classList.remove('on');
+    const blocked = document.getElementById('s-blocked');
+    if(blocked) blocked.style.display='flex';
+    // Sign out
+    try{ auth.signOut(); }catch(e){}
+    return;
+  }
+
+  enterApp();
+}
+
+function enterApp(){
+  document.getElementById('s-login').classList.remove('on');
+  document.getElementById('s-app').style.display = 'block';
+  // Update topbar
+  const av = document.getElementById('top-av');
+  const nm = document.getElementById('top-name');
+  nm.textContent = STATE.perfil.nome || currentUser?.displayName || 'Aluno';
+  if(STATE.perfil.foto || currentUser?.photoURL){
+    av.innerHTML = `<img src="${STATE.perfil.foto||currentUser.photoURL}" style="width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:50%;">`;
+  } else {
+    av.textContent = (STATE.perfil.nome||currentUser?.displayName||'A')[0].toUpperCase();
+  }
+  document.getElementById('sync-dot').style.background = FIREBASE_MODE ? '#22C55E' : '#F59E0B';
+  showScreen('home');
+}
+
+async function saveFirestore(){
+  if(!FIREBASE_MODE || !currentUser?.uid) return;
+  try{
+    await db.collection('alunos').doc(currentUser.uid).set(STATE, {merge:true});
+    // Also write vinculo so professor can find
+    if(STATE.perfil.orientador_email){
+      await db.collection('vinculos').doc(currentUser.uid).set({
+        aluno_uid: currentUser.uid,
+        aluno_nome: STATE.perfil.nome || '',
+        aluno_email: currentUser.email || '',
+        orientador_email: STATE.perfil.orientador_email,
+        updated: new Date().toISOString(),
+        prog_metas: STATE.metas.filter(m=>m.done).length + '/' + STATE.metas.length,
+        ultima_reuniao: STATE.reunioes.length ? STATE.reunioes[STATE.reunioes.length-1].data : '',
+        docs_count: STATE.arquivos.length,
+        artigos_count: STATE.artigos.length,
+      });
+    }
+  }catch(e){ console.warn('Firestore save:', e); }
+}
+
+function autoSave(){
+  saveLocal();
+  saveFirestore();
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+let _curScreen = 'home';
+function showScreen(id){
+  ['home','metas','arquivos','artigos','perfil'].forEach(s=>{
+    document.getElementById('sc-'+s)?.classList.toggle('on', s===id);
+    document.getElementById('bn-'+s)?.classList.toggle('on', s===id);
+  });
+  _curScreen = id;
+  const renders = {home:renderHome,metas:renderMetas,arquivos:renderArquivos,artigos:renderArtigos,perfil:renderPerfil};
+  renders[id]?.();
+}
+
+// ══════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════
+function renderHome(){
+  const el = document.getElementById('home-body');
+  const p = STATE.perfil;
+  const metasDone = STATE.metas.filter(m=>m.done).length;
+  const pendentes = STATE.metas.filter(m=>!m.done).length;
+  const proxMeta = [...STATE.metas].filter(m=>!m.done&&m.due)
+    .sort((a,b)=>new Date(a.due)-new Date(b.due))[0];
+  const diasProx = proxMeta ? Math.ceil((new Date(proxMeta.due)-new Date())/(1000*60*60*24)) : null;
+  const urgente = diasProx !== null && diasProx <= 7;
+
+  el.innerHTML = `
+    <div id="home-graph-wrap">
+      <svg id="home-graph"></svg>
+    </div>
+
+    <!-- Floating info card top -->
+    <div style="position:fixed;top:60px;left:12px;right:12px;z-index:50;pointer-events:none;">
+      <div style="background:rgba(5,8,16,.82);backdrop-filter:blur(12px);
+        border:1px solid rgba(0,212,255,.18);border-radius:12px;
+        padding:10px 14px;display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(0,212,255,.15);
+          border:1.5px solid rgba(0,212,255,.4);flex-shrink:0;overflow:hidden;
+          display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#00D4FF;">
+          ${p.foto?`<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;object-position:center top;">`:(p.nome||currentUser?.displayName||'A')[0].toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.8rem;font-weight:700;color:#E8EAED;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${p.nome||currentUser?.displayName||'Meu nome'}
+          </div>
+          <div style="font-family:var(--fm);font-size:.58rem;color:rgba(0,212,255,.6);margin-top:1px;">
+            ${p.titulo||'Doutorando(a)'} · ${p.programa||'PPGCA'}
+          </div>
+        </div>
+        ${urgente?`<div style="font-family:var(--fm);font-size:.58rem;color:#FF6B35;font-weight:700;text-align:right;pointer-events:all;cursor:pointer;" onclick="showScreen('metas')">⚠️ ${diasProx}d</div>`:''}
+      </div>
+    </div>
+
+    <!-- Hint -->
+    <div id="graph-hint" style="position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+      font-family:var(--fm);font-size:.58rem;color:rgba(0,212,255,.4);
+      letter-spacing:.06em;pointer-events:none;white-space:nowrap;z-index:50;">
+      arraste · toque para abrir
+    </div>`;
+
+  setTimeout(()=>{
+    document.getElementById('graph-hint') && setTimeout(()=>{
+      const h = document.getElementById('graph-hint');
+      if(h) h.style.opacity = '0';
+    }, 3000);
+    buildHomeGraph();
+  }, 60);
+}
+
+function buildHomeGraph(){
+  const svgEl = document.getElementById('home-graph');
+  if(!svgEl || typeof d3 === 'undefined') return;
+  const W = svgEl.clientWidth || window.innerWidth;
+  const H = svgEl.clientHeight || (window.innerHeight - 112);
+
+  const p = STATE.perfil;
+  const metasDone = STATE.metas.filter(m=>m.done).length;
+
+  // ── NODES ──
+  const NODES = [
+    {id:'eu', label: (p.nome||currentUser?.displayName||'Eu').split(' ')[0],
+     sub: p.programa||'PPGCA', r:58, color:'#00D4FF', type:'center',
+     action: null, glow: true},
+
+    {id:'metas', label:'Metas', sub:`${metasDone}/${STATE.metas.length}`,
+     r:44, color:'#00FF88', type:'main', action:()=>showScreen('metas'),
+     subnodes:[
+       {label:'🎯 Ver metas', action:()=>showScreen('metas')},
+       {label:'+ Nova meta',  action:()=>openModal('meta')},
+       {label:'📋 Reuniões',  action:()=>showScreen('metas')},
+     ]},
+
+    {id:'arquivos', label:'Arquivos', sub:`${STATE.arquivos.length} docs`,
+     r:40, color:'#0EA5E9', type:'main', action:()=>showScreen('arquivos'),
+     subnodes:[
+       {label:'📁 Ver arquivos',     action:()=>showScreen('arquivos')},
+       {label:'+ Upload arquivo',    action:()=>showScreen('arquivos')},
+       {label:'🖼 Fotos de campo',   action:()=>{ window._arqCat='Foto'; showScreen('arquivos'); }},
+       {label:'📊 Apresentações',    action:()=>{ window._arqCat='Apresentação'; showScreen('arquivos'); }},
+     ]},
+
+    {id:'artigos', label:'Artigos', sub:`${STATE.artigos.length} prod.`,
+     r:38, color:'#A855F7', type:'main', action:()=>showScreen('artigos'),
+     subnodes:[
+       {label:'📝 Ver artigos', action:()=>showScreen('artigos')},
+       {label:'+ Novo artigo',  action:()=>openModal('artigo')},
+     ]},
+
+    {id:'perfil', label:'Perfil', sub:'cartão · links',
+     r:34, color:'#FF6B35', type:'main', action:()=>showScreen('perfil'),
+     subnodes:[
+       {label:'👤 Editar perfil',      action:()=>showScreen('perfil')},
+       {label:'↗ Compartilhar perfil', action:()=>shareProfile()},
+     ]},
+
+    {id:'orient', label: p.orientador_nome ? p.orientador_nome.split(' ').slice(-1)[0] : 'Orientador',
+     sub: p.orientador_email ? '🔗 vinculado' : 'não vinculado',
+     r:30, color: p.orientador_email ? '#38BDF8' : '#4B5563', type:'sat',
+     action:()=>{ if(!p.orientador_email) showScreen('perfil'); else shareProfile(); }},
+  ];
+
+  const LINKS = [
+    {s:'eu',t:'metas',   v:Math.max(10,STATE.metas.length*3)},
+    {s:'eu',t:'arquivos',v:Math.max(10,STATE.arquivos.length*3)},
+    {s:'eu',t:'artigos', v:Math.max(8,STATE.artigos.length*4)},
+    {s:'eu',t:'perfil',  v:10},
+    {s:'eu',t:'orient',  v:p.orientador_email?14:5},
+  ];
+
+  const nodes = NODES.map(d=>({...d}));
+  const links = LINKS.map(d=>({source:d.s,target:d.t,value:d.v}));
+
+  const ctr = nodes.find(n=>n.id==='eu');
+  ctr.fx = W/2; ctr.fy = H/2;
+
+  const svg = d3.select('#home-graph');
+  svg.selectAll('*').remove();
+
+  const zoom = d3.zoom().scaleExtent([.25,3])
+    .on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const defs = svg.append('defs');
+  nodes.forEach(n=>{
+    const f = defs.append('filter').attr('id','gf-'+n.id)
+      .attr('x','-80%').attr('y','-80%').attr('width','260%').attr('height','260%');
+    f.append('feGaussianBlur').attr('in','SourceGraphic').attr('stdDeviation','6').attr('result','blur');
+    const m = f.append('feMerge');
+    m.append('feMergeNode').attr('in','blur');
+    m.append('feMergeNode').attr('in','SourceGraphic');
+  });
+
+  const g = svg.append('g');
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id)
+      .distance(d=>{
+        const t = nodes.find(n=>n.id===(typeof d.target==='object'?d.target.id:d.target));
+        return t?.type==='sat' ? 140 : 175;
+      }).strength(.5))
+    .force('charge', d3.forceManyBody().strength(d=>
+      d.type==='center'?-900:d.type==='main'?-500:-250))
+    .force('collision', d3.forceCollide().radius(d=>d.r+20).strength(.9))
+    .force('x', d3.forceX(W/2).strength(.04))
+    .force('y', d3.forceY(H/2).strength(.04));
+
+  // Links
+  const linkSel = g.append('g').selectAll('path').data(links).enter()
+    .append('path').attr('fill','none')
+    .attr('stroke', d=>{
+      const src = nodes.find(n=>n.id===(typeof d.source==='object'?d.source.id:d.source));
+      return src ? src.color+'44' : '#333';
+    })
+    .attr('stroke-width', d=>Math.max(1.5, Math.log(d.value+1)*1.2))
+    .attr('stroke-linecap','round');
+
+  const nodeG = g.append('g').selectAll('g').data(nodes).enter().append('g')
+    .style('cursor','pointer')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);if(d.type!=='center'){d.fx=null;d.fy=null;}})
+    )
+    .on('click',(e,d)=>{ document.querySelectorAll('.node-menu').forEach(m=>m.remove()); showNodeMenu(d,e); });
+
+  // Pulse rings
+  nodeG.filter(d=>d.type==='center'||d.type==='main')
+    .append('circle').attr('r',d=>d.r+10)
+    .attr('fill','none')
+    .attr('stroke',d=>d.color).attr('stroke-width',1.5).attr('opacity',.25)
+    .style('animation','pulse-bg 2.8s ease-out infinite')
+    .style('animation-delay',(_,i)=>(i*.4)+'s')
+    .style('transform-origin','center');
+
+  // Second ring for center
+  nodeG.filter(d=>d.type==='center')
+    .append('circle').attr('r',d=>d.r+22)
+    .attr('fill','none')
+    .attr('stroke',d=>d.color).attr('stroke-width',.8).attr('opacity',.12)
+    .style('animation','pulse-bg 3.4s ease-out infinite .8s')
+    .style('transform-origin','center');
+
+  // Main circle with glow
+  nodeG.append('circle')
+    .attr('r',d=>d.r)
+    .attr('fill',d=>d.color+'22')
+    .attr('stroke',d=>d.color)
+    .attr('stroke-width',d=>d.type==='center'?2.5:2)
+    .attr('filter',d=>d.type==='center'?'url(#gf-eu)':null);
+
+  // Inner bright circle
+  nodeG.append('circle')
+    .attr('r',d=>d.r*.55)
+    .attr('fill',d=>d.color+'33');
+
+  // Center dot
+  nodeG.append('circle')
+    .attr('r',d=>d.type==='center'?6:4)
+    .attr('fill',d=>d.color)
+    .attr('filter',d=>'url(#gf-'+d.id+')');
+
+  // Labels
+  nodeG.append('text')
+    .attr('text-anchor','middle').attr('dominant-baseline','central')
+    .attr('fill',d=>d.color)
+    .attr('font-family',"'JetBrains Mono',monospace")
+    .attr('font-weight','700')
+    .attr('font-size',d=>d.type==='center'?'14px':d.type==='main'?'12px':'10px')
+    .attr('y',d=>d.sub?-7:0)
+    .attr('pointer-events','none')
+    .text(d=>d.label);
+
+  nodeG.filter(d=>d.sub).append('text')
+    .attr('text-anchor','middle').attr('dominant-baseline','central')
+    .attr('fill',d=>d.color+'88')
+    .attr('font-family',"'JetBrains Mono',monospace")
+    .attr('font-size','8px').attr('y',d=>8)
+    .attr('pointer-events','none')
+    .text(d=>d.sub);
+
+  // Tick
+  sim.on('tick',()=>{
+    linkSel.attr('d',d=>{
+      const sx=d.source.x||W/2, sy=d.source.y||H/2;
+      const tx=d.target.x||W/2, ty=d.target.y||H/2;
+      const dr=Math.sqrt((tx-sx)**2+(ty-sy)**2)*1.5;
+      return `M${sx},${sy}A${dr},${dr} 0 0,1 ${tx},${ty}`;
+    });
+    nodeG.attr('transform',d=>`translate(${d.x||W/2},${d.y||H/2})`);
+  });
+
+  window.addEventListener('resize', ()=>{
+    ctr.fx = svgEl.clientWidth/2;
+    ctr.fy = svgEl.clientHeight/2;
+    sim.alpha(.3).restart();
+  });
+}
+
+// Node menu popup
+function showNodeMenu(d, event){
+  document.querySelectorAll('.node-menu').forEach(m=>m.remove());
+  if(!d.subnodes){ if(d.action) d.action(); return; }
+
+  const menu = document.createElement('div');
+  menu.className = 'node-menu';
+
+  menu.innerHTML = `<div class="node-menu-title">${d.label}</div>` +
+    d.subnodes.map((s,i)=>`
+      <div class="node-menu-item" id="nmi-${i}">
+        ${s.label}
+      </div>`).join('');
+
+  const x = Math.min(event.clientX, window.innerWidth - 215);
+  const y = Math.min(event.clientY + 8, window.innerHeight - 200);
+  menu.style.left = x+'px';
+  menu.style.top  = y+'px';
+  document.body.appendChild(menu);
+
+  d.subnodes.forEach((s,i)=>{
+    document.getElementById('nmi-'+i)?.addEventListener('click',()=>{
+      menu.remove(); s.action();
+    });
+  });
+
+  setTimeout(()=>document.addEventListener('click', function closer(){
+    menu.remove(); document.removeEventListener('click',closer);
+  }, {once:true}), 100);
+}
+
+// ══════════════════════════════════════════
+// METAS
+// ══════════════════════════════════════════
+function renderMetas(){
+  const el = document.getElementById('metas-body');
+  const metas_pend = STATE.metas.filter(m=>!m.done);
+  const metas_done = STATE.metas.filter(m=>m.done);
+  const reunioes = [...STATE.reunioes].sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+  el.innerHTML = `
+    <div class="sec-title">Metas & Prazos <button class="sec-action" onclick="openModal('meta')">+ Nova</button></div>
+    ${metas_pend.length===0 && metas_done.length===0 ? `
+      <div class="empty"><div class="empty-icon">🎯</div><div class="empty-txt">Nenhuma meta ainda</div>
+      <div class="empty-sub">Seu orientador pode criar metas para você, ou crie a sua</div></div>` : ''}
+    ${metas_pend.map(m=>metaCard(m)).join('')}
+    ${metas_done.length ? `
+      <div class="sec-title" style="margin-top:20px;">Concluídas (${metas_done.length})</div>
+      ${metas_done.map(m=>metaCard(m)).join('')}` : ''}
+
+    <div class="sec-title" style="margin-top:20px;">Reuniões <button class="sec-action" onclick="openModal('reuniao')">+ Registrar</button></div>
+    ${reunioes.length===0 ? `
+      <div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">Nenhuma reunião</div>
+      <div class="empty-sub">Registre suas reuniões de orientação</div></div>` : ''}
+    ${reunioes.map(r=>`
+      <div class="meet-card">
+        <div class="meet-dt">${new Date(r.data).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+        <div class="meet-title">${r.titulo}</div>
+        ${r.notas?`<div class="meet-notes">${r.notas}</div>`:''}
+        <div class="meet-from">Registrado por: ${r.de||'mim'}</div>
+      </div>`).join('')}`;
+}
+
+function metaCard(m){
+  const dias = m.due ? Math.ceil((new Date(m.due)-new Date())/(1000*60*60*24)) : null;
+  const urgente = !m.done && dias!==null && dias<=7;
+  return `
+    <div class="meta-card" style="${urgente?'border-color:#FCA5A5;background:#FFF5F5':''}">
+      <div class="meta-check${m.done?' done':''}" onclick="toggleMeta('${m.id}')">
+        ${m.done?'✓':''}
+      </div>
+      <div class="meta-body">
+        <div class="meta-txt${m.done?' done':''}">${m.txt}</div>
+        ${m.due?`<div class="meta-due">${m.done?'Concluído':'Prazo'}: ${new Date(m.due).toLocaleDateString('pt-BR')}${!m.done&&dias!==null?` · <span style="color:${urgente?'#B91C1C':'#D97706'};font-weight:700">${dias} dias</span>`:''}</div>`:''}
+        ${m.criado_por==='orientador'?`<span class="meta-status-badge" style="background:#EFF6FF;color:#1447A0;">📌 Do orientador</span>`:''}
+      </div>
+    </div>`;
+}
+
+function toggleMeta(id){
+  const m = STATE.metas.find(x=>x.id===id);
+  if(m){ m.done=!m.done; autoSave(); renderMetas(); toast(m.done?'✅ Meta concluída!':'Meta reaberta'); }
+}
+
+// ══════════════════════════════════════════
+// ARQUIVOS
+// ══════════════════════════════════════════
+function renderArquivos(){
+  const el = document.getElementById('arquivos-body');
+  const cats = ['Todos','Dissertação/Tese','Artigo','Apresentação','Dados de campo','Foto','Relatório','Outro'];
+  const _cat = window._arqCat || 'Todos';
+  const filtrados = _cat==='Todos' ? STATE.arquivos : STATE.arquivos.filter(a=>a.cat===_cat);
+
+  const catColors = {
+    'Dissertação/Tese':'#EFF6FF:#1447A0','Artigo':'#FAF5FF:#5B21B6',
+    'Apresentação':'#FFF7ED:#C44B0A','Dados de campo':'#F0FDF4:#059669',
+    'Foto':'#FFF1F2:#BE123C','Relatório':'#FFFBEB:#D97706','Outro':'#F3F4F6:#374151'
+  };
+
+  el.innerHTML = `
+    <div class="sec-title">Arquivos & Documentos</div>
+
+    <!-- Upload area -->
+    <div style="position:relative;margin-bottom:12px;">
+      <button class="add-btn">
+        📎 Adicionar arquivo ou foto
+        <input type="file" multiple accept="*/*"
+          style="position:absolute;inset:0;opacity:0;cursor:pointer;"
+          onchange="handleUpload(event)">
+      </button>
+    </div>
+
+    <!-- Filter pills -->
+    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:12px;">
+      ${cats.map(c=>`
+        <div onclick="window._arqCat='${c}';renderArquivos();"
+          style="flex-shrink:0;padding:5px 13px;border-radius:20px;font-size:.68rem;font-weight:700;cursor:pointer;
+          border:1.5px solid ${_cat===c?'#1447A0':'var(--bd)'};
+          background:${_cat===c?'#1447A0':'#fff'};
+          color:${_cat===c?'#fff':'var(--mu)'};">${c}</div>`).join('')}
+    </div>
+
+    ${filtrados.length===0 ? `
+      <div class="empty"><div class="empty-icon">📁</div>
+      <div class="empty-txt">Nenhum arquivo</div>
+      <div class="empty-sub">Faça upload de documentos, dados ou fotos</div></div>` : ''}
+
+    ${filtrados.map(f=>{
+      const cc = (catColors[f.cat]||'#F3F4F6:#374151').split(':');
+      return `
+        <div class="file-card">
+          <div class="file-icon" style="background:${cc[0]};">
+            ${{Foto:'🖼',Apresentação:'📊','Dados de campo':'🔬',Artigo:'📄','Dissertação/Tese':'📚',Relatório:'📋'}[f.cat]||'📄'}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="file-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+            <div class="file-meta">${f.cat||''} · ${f.data||''} · ${f.size||''}</div>
+            ${f.desc?`<div style="font-size:.7rem;color:var(--mu);margin-top:3px;">${f.desc}</div>`:''}
+          </div>
+          <button onclick="removeArquivo('${f.id}')" style="background:none;border:none;cursor:pointer;color:var(--mu);padding:4px;font-size:.8rem;">✕</button>
+        </div>`}).join('')}`;
+}
+
+function handleUpload(event){
+  Array.from(event.target.files).forEach(file=>{
+    STATE.arquivos.push({
+      id:'f'+Date.now()+Math.random().toString(36).slice(2,6),
+      name:file.name,
+      cat:guessCat(file.name),
+      data:new Date().toLocaleDateString('pt-BR'),
+      size:file.size>1024*1024?(file.size/1024/1024).toFixed(1)+'MB':(file.size/1024).toFixed(0)+'KB',
+      desc:''
+    });
+  });
+  autoSave(); renderArquivos();
+  toast(`✅ ${event.target.files.length} arquivo(s) adicionado(s)`);
+}
+
+function guessCat(name){
+  const n = name.toLowerCase();
+  if(/\.(jpg|jpeg|png|gif|webp)$/.test(n)) return 'Foto';
+  if(/\.(ppt|pptx)$/.test(n)) return 'Apresentação';
+  if(/tese|dissert|cap[íi]tulo/.test(n)) return 'Dissertação/Tese';
+  if(/artigo|paper|manusc/.test(n)) return 'Artigo';
+  if(/relat/.test(n)) return 'Relatório';
+  if(/dados|campo|coleta|planilha|xlsx|csv/.test(n)) return 'Dados de campo';
+  return 'Outro';
+}
+
+function removeArquivo(id){
+  STATE.arquivos = STATE.arquivos.filter(f=>f.id!==id);
+  autoSave(); renderArquivos(); toast('Arquivo removido');
+}
+
+// ══════════════════════════════════════════
+// ARTIGOS
+// ══════════════════════════════════════════
+function renderArtigos(){
+  const el = document.getElementById('artigos-body');
+  const statusColors = {
+    'Em escrita':'#EFF6FF:#1447A0','Em revisão':'#FAF5FF:#5B21B6',
+    'Submetido':'#FFF7ED:#C44B0A','Revisão do editor':'#FFFBEB:#D97706',
+    'Aceito':'#F0FDF4:#059669','Publicado':'#ECFDF5:#15803D'
+  };
+
+  el.innerHTML = `
+    <div class="sec-title">Artigos & Produções <button class="sec-action" onclick="openModal('artigo')">+ Novo</button></div>
+
+    ${STATE.artigos.length===0 ? `
+      <div class="empty"><div class="empty-icon">📝</div>
+      <div class="empty-txt">Nenhum artigo cadastrado</div>
+      <div class="empty-sub">Registre artigos em escrita, submetidos ou publicados</div></div>` : ''}
+
+    ${STATE.artigos.map(a=>{
+      const cc = (statusColors[a.status]||'#F3F4F6:#374151').split(':');
+      return `
+        <div class="art-card">
+          <div class="art-status" style="color:${cc[1]};">${a.status||'Em escrita'}</div>
+          <div class="art-title">${a.titulo}</div>
+          ${a.revista?`<div class="art-journal">${a.revista}</div>`:''}
+          ${a.coautores?`<div style="font-size:.68rem;color:var(--mu);margin-top:4px;">👥 ${a.coautores}</div>`:''}
+          ${a.doi?`<div style="font-family:var(--fm);font-size:.62rem;color:#1447A0;margin-top:3px;">DOI: ${a.doi}</div>`:''}
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button onclick="editArtigo('${a.id}')" style="font-size:.65rem;padding:4px 10px;border-radius:6px;background:#F3F4F6;border:none;cursor:pointer;font-family:var(--ff);">✏️ Editar</button>
+            <button onclick="removeArtigo('${a.id}')" style="font-size:.65rem;padding:4px 10px;border-radius:6px;background:#FEF2F2;border:none;cursor:pointer;font-family:var(--ff);color:#B91C1C;">🗑</button>
+          </div>
+        </div>`}).join('')}
+
+    <!-- Apresentações -->
+    <div class="sec-title" style="margin-top:20px;">Apresentações & Eventos</div>
+    <div style="position:relative;">
+      <button class="add-btn" style="margin-bottom:6px;" onclick="openModal('apresent')">
+        📊 Adicionar apresentação
+      </button>
+    </div>
+    ${STATE.arquivos.filter(f=>f.cat==='Apresentação').map(f=>`
+      <div class="file-card">
+        <div class="file-icon" style="background:#FFF7ED;">📊</div>
+        <div><div class="file-name">${f.name}</div><div class="file-meta">${f.data}</div></div>
+      </div>`).join('') || '<div style="font-size:.78rem;color:var(--mu);padding:10px 0;">Nenhuma apresentação ainda</div>'}`;
+}
+
+function removeArtigo(id){ STATE.artigos=STATE.artigos.filter(a=>a.id!==id); autoSave(); renderArtigos(); }
+function editArtigo(id){ openModal('artigo', STATE.artigos.find(a=>a.id===id)); }
+
+// ══════════════════════════════════════════
+// PERFIL
+// ══════════════════════════════════════════
+function renderPerfil(){
+  const p = STATE.perfil;
+  const el = document.getElementById('perfil-body');
+  el.innerHTML = `
+    <!-- Foto -->
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="position:relative;display:inline-block;">
+        <div style="width:88px;height:88px;border-radius:50%;background:var(--acc);
+          color:#fff;font-size:2rem;font-weight:700;display:flex;align-items:center;
+          justify-content:center;margin:0 auto;overflow:hidden;border:3px solid var(--bd);">
+          ${p.foto?`<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;object-position:center top;">`:(p.nome||'A')[0].toUpperCase()}
+        </div>
+        <label style="position:absolute;bottom:0;right:0;width:26px;height:26px;
+          border-radius:50%;background:#fff;border:2px solid var(--bd);
+          display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.7rem;">
+          📷<input type="file" accept="image/*" style="display:none;" onchange="uploadFoto(event)">
+        </label>
+      </div>
+      <div style="margin-top:10px;font-size:.75rem;color:var(--mu);">Toque no ícone para trocar a foto</div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="profile-form">
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input class="form-input" value="${p.nome||''}" oninput="p.nome=this.value;autoSave();updateTopbar();" placeholder="Seu nome completo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <select class="form-input form-select" onchange="p.titulo=this.value;autoSave();">
+          ${['Doutorando(a)','Mestrando(a)','Graduando(a)','Bolsista IC','Pesquisador(a)'].map(t=>`<option${p.titulo===t?' selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Programa</label>
+        <select class="form-input form-select" onchange="p.programa=this.value;autoSave();">
+          ${['PPGCA','ProfAgua','Graduação Biologia','Outro'].map(t=>`<option${p.programa===t?' selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tema da pesquisa</label>
+        <textarea class="form-input form-textarea" oninput="p.tema=this.value;autoSave();" placeholder="Descreva brevemente seu tema de pesquisa">${p.tema||''}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bio curta (para cartão de visitas)</label>
+        <textarea class="form-input form-textarea" oninput="p.bio=this.value;autoSave();" placeholder="Uma linha sobre você e sua pesquisa">${p.bio||''}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input class="form-input" value="${p.email||''}" oninput="p.email=this.value;autoSave();" placeholder="seu@email.com" type="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lattes ID</label>
+        <input class="form-input" value="${p.lattes||''}" oninput="p.lattes=this.value;autoSave();" placeholder="ID do Lattes">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ORCID</label>
+        <input class="form-input" value="${p.orcid||''}" oninput="p.orcid=this.value;autoSave();" placeholder="0000-0000-0000-0000">
+      </div>
+    </div>
+
+    <!-- Vínculo com orientador -->
+    <div class="profile-form">
+      <div style="font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:12px;">Meu Orientador</div>
+      <div class="form-group">
+        <label class="form-label">E-mail do orientador</label>
+        <input class="form-input" id="orient-email" value="${p.orientador_email||''}" placeholder="professor@unemat.br" type="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome do orientador</label>
+        <input class="form-input" value="${p.orientador_nome||''}" oninput="p.orientador_nome=this.value;autoSave();" placeholder="Prof. Dr. Nome">
+      </div>
+      <button onclick="vincularOrientador()" style="width:100%;padding:11px;background:var(--acc);color:#fff;border:none;border-radius:9px;font-family:var(--ff);font-size:.82rem;font-weight:700;cursor:pointer;">
+        🔗 Vincular ao orientador
+      </button>
+      ${p.orientador_email?`<div style="font-size:.7rem;color:var(--green);font-weight:600;text-align:center;margin-top:6px;">✅ Vinculado a ${p.orientador_email}</div>`:''}
+    </div>
+
+    <!-- Cartão de visitas -->
+    <div class="profile-form" style="background:var(--accl);border-color:#BFDBFE;">
+      <div style="font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:10px;">Cartão de Visitas</div>
+      <div style="font-size:.78rem;color:var(--ink2);margin-bottom:10px;line-height:1.5;">
+        Compartilhe seu perfil profissional com qualquer pessoa — bancas, eventos, congressos.
+      </div>
+      <button onclick="shareProfile()" style="width:100%;padding:11px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-family:var(--ff);font-size:.82rem;font-weight:700;cursor:pointer;">
+        ↗ Gerar e compartilhar perfil
+      </button>
+    </div>
+
+    <!-- Logout -->
+    <button onclick="if(confirm('Sair?'))location.reload();" style="width:100%;padding:10px;background:var(--bg2);color:var(--mu);border:none;border-radius:9px;font-family:var(--ff);font-size:.78rem;cursor:pointer;margin-top:8px;">
+      Sair da conta
+    </button>`;
+}
+
+function updateTopbar(){
+  document.getElementById('top-name').textContent = STATE.perfil.nome || currentUser?.displayName || 'Aluno';
+}
+
+function uploadFoto(event){
+  const file = event.target.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    STATE.perfil.foto = e.target.result;
+    autoSave(); renderPerfil(); renderHome();
+    const av = document.getElementById('top-av');
+    if(av) av.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    toast('✅ Foto atualizada!');
+  };
+  reader.readAsDataURL(file);
+}
+
+function vincularOrientador(){
+  const email = document.getElementById('orient-email')?.value?.trim();
+  if(!email||!email.includes('@')){ toast('❌ E-mail inválido'); return; }
+  STATE.perfil.orientador_email = email;
+  autoSave(); renderPerfil(); renderHome();
+  toast('✅ Orientador vinculado! Dados serão enviados ao SOPA dele.');
+}
+
+function shareProfile(){
+  const p = STATE.perfil;
+  const txt = `${p.nome||'Aluno'}\n${p.titulo||'Doutorando(a)'} · ${p.programa||'PPGCA'}\n${p.orientador_nome?'Orientação: '+p.orientador_nome+'\n':''}${p.tema?'Pesquisa: '+p.tema+'\n':''}${p.email?'E-mail: '+p.email+'\n':''}${p.lattes?'Lattes: http://lattes.cnpq.br/'+p.lattes:''}`;
+  if(navigator.share){ navigator.share({title:p.nome, text:txt}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(txt); toast('✅ Copiado!'); }
+  else { alert(txt); }
+}
+
+// ══════════════════════════════════════════
+// MODAIS
+// ══════════════════════════════════════════
+function openModal(type, data=null){
+  const overlay = document.getElementById('modal');
+  const title   = document.getElementById('modal-title');
+  const body    = document.getElementById('modal-body');
+  overlay.classList.add('on');
+
+  if(type==='meta'){
+    title.textContent = data ? 'Editar meta' : 'Nova meta';
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Descrição da meta</label>
+        <textarea class="form-input form-textarea" id="m-txt" placeholder="Ex: Concluir capítulo 2">${data?.txt||''}</textarea></div>
+      <div class="form-group"><label class="form-label">Prazo</label>
+        <input class="form-input" type="date" id="m-due" value="${data?.due||''}"></div>
+      <button class="btn-save" onclick="saveMeta('${data?.id||''}')">✅ Salvar meta</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>`;
+
+  }else if(type==='reuniao'){
+    title.textContent = 'Registrar reunião';
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Título / tema</label>
+        <input class="form-input" id="r-titulo" placeholder="Ex: Revisão do capítulo 1"></div>
+      <div class="form-group"><label class="form-label">Data</label>
+        <input class="form-input" type="date" id="r-data" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label class="form-label">Notas / encaminhamentos</label>
+        <textarea class="form-input form-textarea" id="r-notas" placeholder="O que foi discutido, próximos passos..."></textarea></div>
+      <button class="btn-save" onclick="saveReuniao()">✅ Registrar reunião</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>`;
+
+  }else if(type==='artigo'){
+    title.textContent = data ? 'Editar artigo' : 'Novo artigo';
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Título</label>
+        <textarea class="form-input form-textarea" id="a-titulo" placeholder="Título do artigo">${data?.titulo||''}</textarea></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-input form-select" id="a-status">
+          ${['Em escrita','Em revisão','Submetido','Revisão do editor','Aceito','Publicado'].map(s=>`<option${data?.status===s?' selected':''}>${s}</option>`).join('')}
+        </select></div>
+      <div class="form-group"><label class="form-label">Revista / periódico</label>
+        <input class="form-input" id="a-revista" value="${data?.revista||''}" placeholder="Nome da revista"></div>
+      <div class="form-group"><label class="form-label">Coautores</label>
+        <input class="form-input" id="a-coaut" value="${data?.coautores||''}" placeholder="Nomes separados por vírgula"></div>
+      <div class="form-group"><label class="form-label">DOI (se publicado)</label>
+        <input class="form-input" id="a-doi" value="${data?.doi||''}" placeholder="10.xxxx/..."></div>
+      <button class="btn-save" onclick="saveArtigo('${data?.id||''}')">✅ Salvar</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>`;
+  }
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('on'); }
+
+function saveMeta(id){
+  const txt = document.getElementById('m-txt')?.value?.trim();
+  if(!txt){ toast('❌ Descreva a meta'); return; }
+  if(id){
+    const m = STATE.metas.find(x=>x.id===id);
+    if(m){ m.txt=txt; m.due=document.getElementById('m-due')?.value||''; }
+  } else {
+    STATE.metas.push({id:'m'+Date.now(),txt,due:document.getElementById('m-due')?.value||'',done:false,criado_por:'aluno'});
+  }
+  autoSave(); closeModal(); renderMetas(); renderHome();
+  toast('✅ Meta salva!');
+}
+
+function saveReuniao(){
+  const titulo = document.getElementById('r-titulo')?.value?.trim();
+  if(!titulo){ toast('❌ Informe o título'); return; }
+  STATE.reunioes.push({
+    id:'r'+Date.now(),
+    titulo,
+    data:document.getElementById('r-data')?.value||new Date().toISOString().slice(0,10),
+    notas:document.getElementById('r-notas')?.value?.trim()||'',
+    de:'aluno'
+  });
+  autoSave(); closeModal(); renderMetas(); renderHome();
+  toast('✅ Reunião registrada!');
+}
+
+function saveArtigo(id){
+  const titulo = document.getElementById('a-titulo')?.value?.trim();
+  if(!titulo){ toast('❌ Informe o título'); return; }
+  const data = {
+    id:id||'a'+Date.now(),
+    titulo,
+    status:document.getElementById('a-status')?.value||'Em escrita',
+    revista:document.getElementById('a-revista')?.value?.trim()||'',
+    coautores:document.getElementById('a-coaut')?.value?.trim()||'',
+    doi:document.getElementById('a-doi')?.value?.trim()||''
+  };
+  if(id){ const i=STATE.artigos.findIndex(a=>a.id===id); if(i>=0) STATE.artigos[i]=data; }
+  else STATE.artigos.push(data);
+  autoSave(); closeModal(); renderArtigos(); renderHome();
+  toast('✅ Artigo salvo!');
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2200);
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', ()=>{
+  initFirebase();
+});
+
+// ══════════════════════════════════════════
+// UNIVERSE BACKGROUND ANIMATION
+// ══════════════════════════════════════════
+(function initUniverse(){
+  const canvas = document.getElementById('universe-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let W, H, particles, connections;
+  const COLORS = ['#00D4FF','#0EA5E9','#00FF88','#A855F7','#FF6B35','#38BDF8'];
+
+  function resize(){
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function initParticles(){
+    const N = Math.min(55, Math.floor((W*H)/18000));
+    particles = Array.from({length:N}, (_, i)=>({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      r: Math.random()*3.5 + 1.2,
+      vx: (Math.random()-.5)*.35,
+      vy: (Math.random()-.5)*.35,
+      color: COLORS[i % COLORS.length],
+      alpha: Math.random()*.5+.3,
+      pulse: Math.random()*Math.PI*2,
+      pulseSpeed: Math.random()*.02+.008,
+    }));
+  }
+
+  // D3 force for dragging
+  let sim;
+  function initForce(){
+    if(typeof d3 === 'undefined') return;
+    sim = d3.forceSimulation(particles)
+      .force('charge', d3.forceManyBody().strength(-12))
+      .force('collision', d3.forceCollide(d=>d.r+8).strength(.4))
+      .alphaDecay(.02)
+      .velocityDecay(.6)
+      .on('tick', ()=>{
+        particles.forEach(p=>{
+          // wrap edges
+          if(p.x<-20) p.x=W+20;
+          if(p.x>W+20) p.x=-20;
+          if(p.y<-20) p.y=H+20;
+          if(p.y>H+20) p.y=-20;
+        });
+      });
+  }
+
+  // Drag
+  function addDrag(){
+    if(typeof d3 === 'undefined') return;
+    const overlay = d3.select(canvas);
+    let dragging = null;
+
+    function findNearest(ex, ey){
+      let best=null, bestD=999;
+      particles.forEach(p=>{
+        const d=Math.hypot(p.x-ex,p.y-ey);
+        if(d<bestD&&d<p.r*4+20){bestD=d;best=p;}
+      });
+      return best;
+    }
+
+    overlay.on('mousedown touchstart', function(e){
+      e.preventDefault();
+      const [ex,ey] = getCoords(e);
+      dragging = findNearest(ex,ey);
+      if(dragging){ dragging.fx=dragging.x; dragging.fy=dragging.y; sim?.alphaTarget(.3).restart(); }
+    });
+    overlay.on('mousemove touchmove', function(e){
+      if(!dragging) return;
+      e.preventDefault();
+      const [ex,ey] = getCoords(e);
+      dragging.fx=ex; dragging.fy=ey;
+    });
+    overlay.on('mouseup touchend', function(){
+      if(dragging){ dragging.fx=null; dragging.fy=null; sim?.alphaTarget(0); dragging=null; }
+    });
+  }
+
+  function getCoords(e){
+    const rect = canvas.getBoundingClientRect();
+    if(e.touches){ return [e.touches[0].clientX-rect.left, e.touches[0].clientY-rect.top]; }
+    return [e.clientX-rect.left, e.clientY-rect.top];
+  }
+
+  // Draw
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Background gradient
+    const g = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.7);
+    g.addColorStop(0,'rgba(13,27,42,.95)');
+    g.addColorStop(1,'rgba(5,8,16,1)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    const now = Date.now();
+
+    // Connections
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const a=particles[i], b=particles[j];
+        const dist=Math.hypot(a.x-b.x,a.y-b.y);
+        const maxDist = 120 + (W > 500 ? 40 : 0);
+        if(dist < maxDist){
+          const alpha = (1 - dist/maxDist) * .25;
+          const grd = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+          grd.addColorStop(0, a.color.replace(')',`,${alpha})`).replace('rgb','rgba').replace('#','').length > 10 ? hexToRgba(a.color, alpha) : hexToRgba(a.color,alpha));
+          grd.addColorStop(1, hexToRgba(b.color, alpha));
+          ctx.beginPath();
+          ctx.moveTo(a.x,a.y);
+          ctx.lineTo(b.x,b.y);
+          ctx.strokeStyle = grd;
+          ctx.lineWidth = .6 + (1-dist/maxDist)*.8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Particles
+    particles.forEach(p=>{
+      p.pulse += p.pulseSpeed;
+      const pAlpha = p.alpha + Math.sin(p.pulse)*.15;
+      const pr = p.r + Math.sin(p.pulse*.7)*.5;
+
+      // Glow
+      const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,pr*4);
+      glow.addColorStop(0, hexToRgba(p.color, pAlpha*.6));
+      glow.addColorStop(1, hexToRgba(p.color, 0));
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,pr*4,0,Math.PI*2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+
+      // Core
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,pr,0,Math.PI*2);
+      ctx.fillStyle = hexToRgba(p.color, pAlpha);
+      ctx.fill();
+
+      // Bright center dot
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,pr*.4,0,Math.PI*2);
+      ctx.fillStyle = hexToRgba('#ffffff', pAlpha*.8);
+      ctx.fill();
+
+      // Float (when no D3)
+      if(!sim){
+        p.x += p.vx; p.y += p.vy;
+        if(p.x<-10) p.x=W+10; if(p.x>W+10) p.x=-10;
+        if(p.y<-10) p.y=H+10; if(p.y>H+10) p.y=-10;
+      }
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  function hexToRgba(hex, alpha){
+    const r=parseInt(hex.slice(1,3),16)||0;
+    const g=parseInt(hex.slice(3,5),16)||0;
+    const b=parseInt(hex.slice(5,7),16)||0;
+    return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+  }
+
+  resize();
+  initParticles();
+
+  // Wait for D3 then init force
+  const waitD3 = setInterval(()=>{
+    if(typeof d3 !== 'undefined'){
+      clearInterval(waitD3);
+      initForce();
+      addDrag();
+    }
+  }, 100);
+
+  window.addEventListener('resize',()=>{ resize(); initParticles(); if(sim) sim.nodes(particles); });
+  draw();
+})();
+
+// ══════════════════════════════════════════
+// CONTROLE DE ACESSO — LINK COM CONVITE
+// ══════════════════════════════════════════
+
+// Lista de e-mails autorizados (fallback sem Firebase)
+const EMAILS_AUTORIZADOS = [
+  'daiane', 'maisa', 'cleverson', 'thiago',
+  'maria.silvina', 'edilane',
+  // adicione os e-mails completos quando souber
+];
+
+// Checa se o acesso é permitido
+async function checkAccess(user){
+  const params = new URLSearchParams(window.location.search);
+  const inviteCode = params.get('invite') || params.get('i') || '';
+  const orientCode = params.get('orient') || '';
+
+  // Se veio com ?invite=CODIGO → valida no Firebase
+  if(inviteCode){
+    if(FIREBASE_MODE && db){
+      try{
+        const snap = await db.collection('convites').doc(inviteCode).get();
+        if(snap.exists && !snap.data().usado){
+          // Marcar como usado e salvar vínculo
+          await db.collection('convites').doc(inviteCode).update({
+            usado: true,
+            usado_por: user.uid,
+            usado_em: new Date().toISOString(),
+            aluno_email: user.email
+          });
+          // Salvar orientador automaticamente
+          if(snap.data().orientador_email){
+            STATE.perfil.orientador_email = snap.data().orientador_email;
+            STATE.perfil.orientador_nome  = snap.data().orientador_nome || 'Prof. Dr. Ernandes Sobreira';
+          }
+          localStorage.setItem('sopa_aluno_autorizado_'+user.uid, '1');
+          return true;
+        }
+        // Código já usado mas é o mesmo usuário → permite
+        if(snap.exists && snap.data().usado_por === user.uid){
+          if(snap.data().orientador_email){
+            STATE.perfil.orientador_email = STATE.perfil.orientador_email || snap.data().orientador_email;
+            STATE.perfil.orientador_nome  = STATE.perfil.orientador_nome  || snap.data().orientador_nome || 'Prof. Dr. Ernandes Sobreira';
+          }
+          return true;
+        }
+        // Código inválido ou já usado por outro
+        return false;
+      }catch(e){
+        // Firebase error → checar localStorage como fallback
+      }
+    }
+    // Sem Firebase → aceitar qualquer código (modo local/dev)
+    localStorage.setItem('sopa_aluno_autorizado_'+user.uid, '1');
+    return true;
+  }
+
+  // Se já foi autorizado antes (localStorage)
+  if(localStorage.getItem('sopa_aluno_autorizado_'+(user?.uid||'local'))){
+    return true;
+  }
+
+  // Modo local sem código → bloquear
+  if(!FIREBASE_MODE) return false;
+
+  // Checa se o e-mail está na lista de autorizados
+  const email = (user?.email||'').toLowerCase();
+  const autorizado = EMAILS_AUTORIZADOS.some(e => email.includes(e));
+  if(autorizado){
+    localStorage.setItem('sopa_aluno_autorizado_'+user.uid, '1');
+    return true;
+  }
+
+  // Checa na coleção 'alunos_autorizados' do Firebase
+  try{
+    const snap = await db.collection('alunos_autorizados').doc(user.uid).get();
+    if(snap.exists){ return true; }
+    // Checa por e-mail
+    const byEmail = await db.collection('alunos_autorizados')
+      .where('email','==',user.email).limit(1).get();
+    if(!byEmail.empty){ return true; }
+  }catch(e){}
+
+  return false;
+}
+
+// Gerar código de convite (chamado pelo professor no SOPA professor)
+// Retorna o link completo para mandar ao aluno
+async function gerarConvite(alunoNome){
+  if(!FIREBASE_MODE || !db) return null;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<8;i++) code += chars[Math.floor(Math.random()*chars.length)];
+
+  await db.collection('convites').doc(code).set({
+    code,
+    aluno_nome: alunoNome || '',
+    orientador_email: 'ernandes.sobreira@unemat.br',
+    orientador_nome: 'Prof. Dr. Ernandes Sobreira',
+    criado_em: new Date().toISOString(),
+    expira_em: new Date(Date.now() + 30*24*60*60*1000).toISOString(), // 30 dias
+    usado: false,
+    usado_por: null,
+  });
+
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?invite=${code}`;
+}
+</script>
+</body>
+</html>
