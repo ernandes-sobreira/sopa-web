@@ -2246,6 +2246,15 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 <div id="s-galeria" class="sc"><div id="galeria-content"></div></div>
 
 <!-- ══ TELA: ORIENTANDOS ══ -->
+<!-- Orient Detail Panel -->
+<div id="od-panel" style="position:fixed;inset:0;z-index:400;background:rgba(5,8,16,.92);display:none;flex-direction:column;overflow:hidden;">
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;background:#0D1117;flex-shrink:0;">
+    <button onclick="odClose()" style="background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:6px 14px;color:#9CA3AF;cursor:pointer;font-size:.8rem;">← Voltar</button>
+    <div id="od-panel-title" style="flex:1;font-size:.9rem;font-weight:700;color:#E8EAED;"></div>
+  </div>
+  <div id="od-sheet-content" style="flex:1;overflow-y:auto;padding-bottom:60px;"></div>
+</div>
+
 <div id="s-orient" class="sc">
   <div id="orient-content"></div>
 </div>
@@ -6995,11 +7004,13 @@ function odVincular(oid){
 function odOpen(id){
   _odOpen = id;
   _odTab = 'metas';
-  document.getElementById('od-panel').classList.add('on');
+  const panel = document.getElementById('od-panel');
+  if(panel){ panel.style.display='flex'; }
   renderOdSheet();
 }
 function odClose(){
-  document.getElementById('od-panel').classList.remove('on');
+  const panel = document.getElementById('od-panel');
+  if(panel){ panel.style.display='none'; }
   _odOpen = null;
 }
 
@@ -7008,6 +7019,8 @@ function renderOdSheet(){
   if(!o) return;
   const el = document.getElementById('od-sheet-content');
   if(!el) return;
+  const titleEl = document.getElementById('od-panel-title');
+  if(titleEl) titleEl.textContent = o.nome;
 
   const metasDone = (o.metas||[]).filter(m=>m.done).length;
   const pct = o.metas.length ? Math.round(metasDone/o.metas.length*100) : 0;
@@ -12940,7 +12953,7 @@ document.addEventListener('click', function(e){
   else if(action==='del-meta') odDelMetaInline(oid, mid);
   else if(action==='del-reuniao') odDelReuniaoInline(oid, rid);
   else if(action==='del-doc') odDelDocInline(oid, btn.dataset.did);
-  else if(action==='edit-orient'){ _odOpen=oid; _odTab='info'; document.getElementById('od-panel').classList.add('on'); renderOdSheet(); }
+  else if(action==='edit-orient'){ odOpen(oid); }
   else if(action==='vincular') gerarConviteAluno(oid);
   else if(action==='del-orient'){
     const o=ORIENTANDOS.find(x=>x.id==oid);
