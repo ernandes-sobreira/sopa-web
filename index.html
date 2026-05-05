@@ -2910,40 +2910,27 @@ function buildHomeGraph(){
 
   // ── CHAOS: random initial positions far from center ──
   const RAND = (min,max) => min + Math.random()*(max-min);
-  HNODES.forEach(n=>{
-    if(n.type==='center'){
-      n.x = W/2; n.y = H/2;
-    } else if(n.type==='main'){
-      // Main nodes: scatter at medium distance, random angle
-      const angle = RAND(0, Math.PI*2);
-      const dist  = RAND(120, Math.min(W,H)*.42);
-      n.x = W/2 + Math.cos(angle)*dist;
-      n.y = H/2 + Math.sin(angle)*dist;
-    } else {
-      // Satellites: even more random, can go near edges
-      const angle = RAND(0, Math.PI*2);
-      const dist  = RAND(90, Math.min(W,H)*.48);
-      n.x = W/2 + Math.cos(angle)*dist;
-      n.y = H/2 + Math.sin(angle)*dist;
-    }
-    // Add velocity for organic drift
-    n.vx = RAND(-.8, .8);
-    n.vy = RAND(-.8, .8);
+  // Place 6 main nodes evenly like clock positions — clean, no overlap
+  const mainNodes = HNODES.filter(n=>n.type==='main');
+  mainNodes.forEach((n,idx)=>{
+    const angle = (idx/mainNodes.length)*Math.PI*2 - Math.PI/2;
+    const dist  = Math.min(W,H)*.36;
+    n.x = W/2 + Math.cos(angle)*dist;
+    n.y = H/2 + Math.sin(angle)*dist;
+    n.vx = 0; n.vy = 0;
+  });
+  HNODES.filter(n=>n.type==='center').forEach(n=>{
+    n.x=W/2; n.y=H/2; n.vx=0; n.vy=0;
   });
 
   // ── LINKS — irregular distances ──
   const HLINKS = [
-    {s:'prof',      t:'pesquisa',   v:102, d:RAND(160,220)},
-    {s:'prof',      t:'orientacao', v:85,  d:RAND(150,210)},
-    {s:'prof',      t:'projetos',   v:27,  d:RAND(160,220)},
-    {s:'prof',      t:'producao',   v:50,  d:RAND(150,200)},
-    {s:'prof',      t:'agenda',     v:10,  d:RAND(140,190)},
-    {s:'prof',      t:'ia',         v:25,  d:RAND(155,215)},
-    // Cross links
-    {s:'pesquisa',  t:'projetos',   v:15,  d:RAND(80,130)},
-    {s:'pesquisa',  t:'producao',   v:20,  d:RAND(70,120)},
-    {s:'orientacao',t:'projetos',   v:10,  d:RAND(80,120)},
-    {s:'agenda',    t:'projetos',   v:8,   d:RAND(75,115)},
+    {s:'prof', t:'pesquisa',   v:102, d:200},
+    {s:'prof', t:'orientacao', v:85,  d:200},
+    {s:'prof', t:'projetos',   v:27,  d:200},
+    {s:'prof', t:'producao',   v:50,  d:200},
+    {s:'prof', t:'agenda',     v:10,  d:200},
+    {s:'prof', t:'ia',         v:25,  d:200},
   ];
 
   const nodes = HNODES.map(d=>({...d}));
@@ -2977,35 +2964,17 @@ function buildHomeGraph(){
   // ── FORCE SIMULATION — chaotic settings ──
   const sim = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(links).id(d=>d.id)
-      .distance(d => d.dist || 160)
-      .strength(d => {
-        // Weaker links = more chaos
-        const src = nodes.find(n=>n.id===(typeof d.source==='object'?d.source.id:d.source));
-        const tgt = nodes.find(n=>n.id===(typeof d.target==='object'?d.target.id:d.target));
-        if(src?.type==='center' || tgt?.type==='center') return .28;
-        return .12; // cross-links very weak = chaos
-      }))
+      .distance(d => d.d || 200)
+      .strength(.5))
     .force('charge', d3.forceManyBody()
-      .strength(d => {
-        if(d.type==='center') return -2000;
-        if(d.type==='main')   return RAND(-900,-600);
-        return RAND(-400,-250);
-      })
-      .distanceMax(500)
-      .distanceMin(40))
+      .strength(d => d.type==='center' ? -2500 : -1200)
+      .distanceMax(600).distanceMin(50))
     .force('collision', d3.forceCollide()
-      .radius(d => d.r + RAND(18,32))
-      .strength(.92))
-    .force('x', d3.forceX(d => {
-      if(d.type==='center') return W/2;
-      return W/2 + RAND(-W*.3, W*.3);
-    }).strength(d => d.type==='center' ? 1 : .02))
-    .force('y', d3.forceY(d => {
-      if(d.type==='center') return H/2;
-      return H/2 + RAND(-H*.3, H*.3);
-    }).strength(d => d.type==='center' ? 1 : .02))
-    .alphaDecay(.010)
-    .velocityDecay(.28);
+      .radius(d => d.r + 35).strength(.98))
+    .force('x', d3.forceX(W/2).strength(d=>d.type==='center'?1:.04))
+    .force('y', d3.forceY(H/2).strength(d=>d.type==='center'?1:.04))
+    .alphaDecay(.015)
+    .velocityDecay(.35);
 
   // ── LINKS ──
   const linkSel = g.append('g').selectAll('path').data(links).enter()
@@ -3150,16 +3119,16 @@ function buildHomeGraph(){
   // ── CONTINUOUS DRIFT — organic motion even at rest ──
   function addDrift(){
     setInterval(()=>{
-      if(sim.alpha() < .01){
+      if(sim.alpha() < .005){
         nodes.forEach(n=>{
           if(n.type!=='center' && !n.fx){
-            n.vx += RAND(-.15,.15);
-            n.vy += RAND(-.15,.15);
+            n.vx += RAND(-.06,.06);
+            n.vy += RAND(-.06,.06);
           }
         });
-        sim.alpha(.05).restart();
+        sim.alpha(.02).restart();
       }
-    }, 3000);
+    }, 4000);
   }
   addDrift();
 
