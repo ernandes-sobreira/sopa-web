@@ -1967,6 +1967,12 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 .sb-label{font-size:.82rem;font-weight:600;color:#C9D1D9;}
 .sb-sub{font-size:.62rem;color:#6B7280;font-family:'JetBrains Mono',monospace;}
 
+
+.od-section{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);}
+.od-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:.8rem;font-weight:700;color:#E8EAED;}
+.od-add{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:4px 10px;color:#00D4FF;font-size:.68rem;font-weight:700;cursor:pointer;}
+.od-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.od-item:last-child{border-bottom:none;}
 </style>
 </head>
 <body>
@@ -2604,28 +2610,22 @@ async function saveToFirestore() {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Sync each orientando's metas to vinculos so aluno can see
+    // Sync each orientando to shared_orient collection
     (ORIENTANDOS||[]).forEach(o=>{
-      if(!o.nome) return;
-      // Find vinculo by name match or aluno_uid
-      const query = o.aluno_uid
-        ? db.collection('vinculos').doc(o.aluno_uid)
-        : null;
-      if(query){
-        query.update({
-          metas_professor: o.metas||[],
-          reunioes_professor: o.reunioes||[],
-          prof_updated: new Date().toISOString()
-        }).catch(()=>{});
-      }
-      // Also try by inviteCode
-      if(o.inviteCode){
-        db.collection('convites').doc(o.inviteCode).update({
-          metas_professor: o.metas||[],
-          reunioes_professor: o.reunioes||[],
-          prof_updated: new Date().toISOString()
-        }).catch(()=>{});
-      }
+      if(!o.inviteCode && !o.aluno_uid) return;
+      const docId = o.inviteCode || o.aluno_uid;
+      db.collection('shared_orient').doc(docId).set({
+        metas: o.metas||[],
+        reunioes: o.reunioes||[],
+        docs: o.docs||[],
+        info: {
+          nome: o.nome, nivel: o.nivel, programa: o.programa,
+          tema: o.tema, prazo_entrega: o.prazo_entrega
+        },
+        prof_updated: new Date().toISOString(),
+        inviteCode: o.inviteCode||'',
+        aluno_uid: o.aluno_uid||''
+      }, {merge:true}).catch(()=>{});
     });
 
     setSyncStatus('ok');
@@ -6916,104 +6916,89 @@ function renderOdSheet(){
   const o = ORIENTANDOS.find(x=>x.id===_odOpen);
   if(!o) return;
   const el = document.getElementById('od-sheet-content');
+  if(!el) return;
 
-  const tabs = ['metas','reunioes','docs','info'].map(t=>`
-    <div class="od-tab${_odTab===t?' on':''}" onclick="_odTab='${t}';renderOdSheet();">
-      ${{metas:'🎯 Metas',reunioes:'📋 Reuniões',docs:'📁 Docs',info:'ℹ️ Info'}[t]}
-    </div>`).join('');
+  const metasDone = (o.metas||[]).filter(m=>m.done).length;
+  const pct = o.metas.length ? Math.round(metasDone/o.metas.length*100) : 0;
 
-  let body = '';
-  if(_odTab==='metas'){
-    body = `
-      <button class="od-add-btn" onclick="odAddMeta('${o.id}')">+ Adicionar meta / entrega</button>
-      ${o.metas.map(m=>`
-        <div class="meta-item">
+  // ── METAS ──
+  const metasHtml = `
+    <div class="od-section">
+      <div class="od-section-head">
+        <span>🎯 Metas <span style="color:#6B7280;font-size:.75rem;">${metasDone}/${o.metas.length} · ${pct}%</span></span>
+        <button class="od-add" onclick="odAddMeta('${o.id}')">+ Meta</button>
+      </div>
+      <div style="background:rgba(0,212,255,.06);border-radius:6px;height:4px;margin-bottom:10px;">
+        <div style="background:#00D4FF;height:4px;border-radius:6px;width:${pct}%;transition:width .3s;"></div>
+      </div>
+      ${(o.metas||[]).length ? (o.metas||[]).map(m=>`
+        <div class="od-item">
           <div class="meta-check${m.done?' done':''}" onclick="odToggleMeta('${o.id}','${m.id}')">
             ${m.done?'✓':''}
           </div>
-          <div style="flex:1">
-            <div class="meta-text" style="${m.done?'text-decoration:line-through;opacity:.5':''}">${m.txt}</div>
-            ${m.due?`<div class="meta-due">Prazo: ${new Date(m.due).toLocaleDateString('pt-BR')}</div>`:''}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.82rem;font-weight:${m.done?400:600};color:${m.done?'#4B5563':'#E8EAED'};text-decoration:${m.done?'line-through':'none'};">${m.nome||m.name||''}</div>
+            ${m.due?`<div style="font-size:.65rem;color:#6B7280;">📅 ${m.due}</div>`:''}
           </div>
-        </div>`).join('') || '<div style="color:#9CA3AF;font-size:.8rem;padding:20px 0">Nenhuma meta cadastrada</div>'}`;
+          <button onclick="odEditMeta('${o.id}','${m.id}')" style="background:none;border:none;color:#6B7280;cursor:pointer;font-size:.8rem;">✏️</button>
+          <button onclick="odDelMeta('${o.id}','${m.id}')" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:.8rem;">✕</button>
+        </div>`).join('') : '<div style="color:#4B5563;font-size:.78rem;padding:8px 0;">Nenhuma meta ainda.</div>'}
+    </div>`;
 
-  } else if(_odTab==='reunioes'){
-    body = `
-      <button class="od-add-btn" onclick="odAddReuniao('${o.id}')">+ Registrar reunião</button>
-      ${[...o.reunioes].reverse().map(r=>`
-        <div class="meet-card">
-          <div class="meet-date">${new Date(r.data).toLocaleDateString('pt-BR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
-          <div class="meet-title">${r.titulo}</div>
-          ${r.notas?`<div class="meet-notes">${r.notas}</div>`:''}
-        </div>`).join('') || '<div style="color:#9CA3AF;font-size:.8rem;padding:20px 0">Nenhuma reunião registrada</div>'}`;
-
-  } else if(_odTab==='docs'){
-    body = `
-      <button class="od-add-btn" style="position:relative">
-        + Adicionar documento
-        <input type="file" accept=".pdf,.doc,.docx,.txt,.zip" multiple
-          style="position:absolute;inset:0;opacity:0;cursor:pointer;"
-          onchange="odUploadDoc('${o.id}',event)">
-      </button>
-      <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.72rem;color:#1D4ED8;">
-        🔗 <strong>Integração futura:</strong> alunos poderão enviar documentos diretamente via SOPA deles para cair aqui automaticamente.
+  // ── REUNIÕES ──
+  const reunioesHtml = `
+    <div class="od-section">
+      <div class="od-section-head">
+        <span>📋 Reuniões <span style="color:#6B7280;font-size:.75rem;">${(o.reunioes||[]).length}</span></span>
+        <button class="od-add" onclick="odAddReuniao('${o.id}')">+ Reunião</button>
       </div>
-      ${o.docs.map(d=>`
-        <div class="doc-card">
-          <div class="doc-icon">📄</div>
-          <div style="flex:1">
-            <div class="doc-name">${d.name}</div>
-            <div class="doc-meta">${d.tipo||''} · ${d.data||''} · ${d.size||''}</div>
+      ${(o.reunioes||[]).length ? (o.reunioes||[]).slice().reverse().map(r=>`
+        <div class="od-item">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.82rem;font-weight:600;color:#E8EAED;">${r.titulo||r.assunto||'Reunião'}</div>
+            <div style="font-size:.65rem;color:#6B7280;">📅 ${r.data||''} ${r.notas?'· '+r.notas.slice(0,40):''}</div>
           </div>
-          <button onclick="odRemoveDoc('${o.id}','${d.id}')" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:.8rem;">✕</button>
-        </div>`).join('') || '<div style="color:#9CA3AF;font-size:.8rem;padding:10px 0">Nenhum documento ainda</div>'}`;
+          <button onclick="odDelReuniao('${o.id}','${r.id||r.data}')" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:.8rem;">✕</button>
+        </div>`).join('') : '<div style="color:#4B5563;font-size:.78rem;padding:8px 0;">Nenhuma reunião ainda.</div>'}
+    </div>`;
 
-  } else if(_odTab==='info'){
-    const progNiveis = [25,50,75,100];
-    body = `
-      <div style="margin-bottom:12px;">
-        <div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;margin-bottom:8px;">Progresso do doutorado/mestrado</div>
-        <div style="display:flex;gap:8px;">
-          ${progNiveis.map(p=>`
-            <button onclick="odSetProg('${o.id}',${p})"
-              style="flex:1;padding:8px;border-radius:8px;border:2px solid ${o.prog>=p?o.cor:'#E5E7EB'};
-              background:${o.prog>=p?o.cor+'18':'#fff'};color:${o.prog>=p?o.cor:'#9CA3AF'};
-              font-size:.7rem;font-weight:700;cursor:pointer;">${p}%</button>`).join('')}
-        </div>
+  // ── DOCUMENTOS ──
+  const docsHtml = `
+    <div class="od-section">
+      <div class="od-section-head">
+        <span>📁 Documentos <span style="color:#6B7280;font-size:.75rem;">${(o.docs||[]).length}</span></span>
+        <button class="od-add" onclick="odAddDoc('${o.id}')">+ Doc</button>
       </div>
-      <div class="doc-card" style="flex-direction:column;gap:6px;align-items:flex-start;">
-        <div style="font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">Informações</div>
-        <div style="font-size:.82rem;color:#C9D1D9;"><strong>Tema:</strong> ${o.tema}</div>
-        <div style="font-size:.82rem;color:#C9D1D9;"><strong>Programa:</strong> ${o.programa}</div>
-        <div style="font-size:.82rem;color:#C9D1D9;"><strong>Início:</strong> ${o.inicio} · <strong>Previsão:</strong> ${o.previsao}</div>
-        <div style="font-size:.82rem;color:#C9D1D9;"><strong>Bolsa:</strong> ${o.bolsa}</div>
-        <div style="font-size:.82rem;color:#C9D1D9;"><strong>Status:</strong> ${o.status}</div>
-      </div>
-      <div style="margin-top:12px;">
-        <div style="font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;margin-bottom:8px;">Próxima entrega</div>
-        <input type="text" value="${o.proxima_entrega||''}" placeholder="Ex: Qualificação"
-          style="width:100%;padding:8px 12px;border:1px solid rgba(0,212,255,.1);border-radius:8px;font-family:var(--ff);font-size:.82rem;margin-bottom:6px;"
-          onchange="odUpdateField('${o.id}','proxima_entrega',this.value)">
-        <input type="date" value="${o.prazo_entrega||''}"
-          style="width:100%;padding:8px 12px;border:1px solid rgba(0,212,255,.1);border-radius:8px;font-family:var(--ff);font-size:.82rem;"
-          onchange="odUpdateField('${o.id}','prazo_entrega',this.value)">
-      </div>`;
-  }
+      ${(o.docs||[]).length ? (o.docs||[]).map(d=>`
+        <div class="od-item">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.82rem;font-weight:600;color:#E8EAED;">${d.nome||d.titulo||'Documento'}</div>
+            <div style="font-size:.65rem;color:#6B7280;">📅 ${d.data||''} ${d.tipo?'· '+d.tipo:''}</div>
+          </div>
+          ${d.url?`<a href="${d.url}" target="_blank" style="color:#00D4FF;font-size:.75rem;">🔗</a>`:''}
+          <button onclick="odDelDoc('${o.id}','${d.id||d.nome}')" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:.8rem;">✕</button>
+        </div>`).join('') : '<div style="color:#4B5563;font-size:.78rem;padding:8px 0;">Nenhum documento ainda.</div>'}
+    </div>`;
 
-  el.innerHTML = `
-    <div class="od-head">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-        <div style="width:38px;height:38px;border-radius:50%;background:${o.cor};color:#fff;
-          display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;">${o.avatar}</div>
-        <div>
-          <div style="font-size:.95rem;font-weight:700;color:#E8EAED;">${o.nome}</div>
-          <div style="font-size:.65rem;color:#6B7280;font-family:'JetBrains Mono',monospace;">${o.nivel} · ${o.programa} · ${o.prog}%</div>
-        </div>
-        <button onclick="odClose()" style="margin-left:auto;width:28px;height:28px;border-radius:7px;background:rgba(22,27,34,.9);border:none;cursor:pointer;font-size:.75rem;color:#6B7280;">✕</button>
+  // ── INFO ──
+  const infoHtml = `
+    <div class="od-section">
+      <div class="od-section-head"><span>ℹ️ Informações</span>
+        <button class="od-add" onclick="openOrientEdit('${o.id}')">✏️ Editar</button>
       </div>
-    </div>
-    <div class="od-tabs">${tabs}</div>
-    <div class="od-body">${body}</div>`;
+      <div style="display:grid;gap:8px;">
+        ${[['Tema',o.tema],['Programa',o.programa],['Nível',o.nivel],
+           ['Início',o.inicio],['Previsão defesa',o.prazo_entrega],
+           ['Bolsa',o.bolsa],['Status',o.status]].filter(([,v])=>v).map(([k,v])=>`
+          <div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);">
+            <span style="font-size:.7rem;color:#6B7280;min-width:100px;">${k}</span>
+            <span style="font-size:.78rem;color:#E8EAED;font-weight:600;">${v}</span>
+          </div>`).join('')}
+        ${o.ultimaAtualizacao?`<div style="font-size:.65rem;color:#00FF8877;margin-top:4px;">🔄 Aluno atualizou: ${new Date(o.ultimaAtualizacao).toLocaleDateString('pt-BR')}</div>`:''}
+      </div>
+    </div>`;
+
+  el.innerHTML = metasHtml + reunioesHtml + docsHtml + infoHtml;
 }
 
 // ── ACTIONS ──
