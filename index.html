@@ -254,7 +254,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:19px;heigh
 .dnc{font-weight:800;font-size:.9rem;}
 .cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:9px;}
 .cd2{text-align:center;font-size:.54rem;font-weight:800;color:var(--mu);padding:3px;}
-.cd{aspect-ratio:1;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.72rem;font-weight:600;position:relative;}
+.cd{aspect-ratio:1;min-height:40px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.72rem;font-weight:600;position:relative;}
 .cd:hover{background:var(--bd);}.cd.td{background:var(--ag);color:#fff;font-weight:900;}.cd.om{color:var(--bd);}
 .evc{background:rgba(13,17,23,.88);border:1px solid rgba(0,212,255,.1);border-radius:12px;padding:13px;}
 
@@ -3996,7 +3996,7 @@ function renderAgenda(){
     const dStr=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const dayEvs=evs[dStr]||[];
     const dotColors=[...new Set(dayEvs.map(e=>e.color))].slice(0,3);
-    const dots=dotColors.map(col=>`<span style="width:4px;height:4px;border-radius:50%;background:${col};display:inline-block;margin:0 1px"></span>`).join('');
+    const dots=dotColors.map(col=>`<span style="width:6px;height:6px;border-radius:50%;background:${col};display:inline-block;margin:0 2px;box-shadow:0 0 4px ${col}88"></span>`).join('');
     ch+=`<div class="cd ${iT?'td':''}" onclick="selDay('${dStr}')" style="flex-direction:column;gap:1px">${d}${dots?`<div style="display:flex;justify-content:center">${dots}</div>`:''}</div>`;
   }
   const selD=window._selDay||(calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(D.getDate()).padStart(2,'0'));
@@ -4068,7 +4068,100 @@ function renderAgenda(){
       <div class="slb"><span class="pls"></span>PRÓXIMOS (${futEvs.length})</div>${uH}</div>
   </div>`;
 }
-function selDay(d){window._selDay=d;renderAgenda();}
+function selDay(d){window._selDay=d;renderAgenda();showDayPanel(d);}
+
+function showDayPanel(dateStr){
+  document.querySelectorAll('.day-panel').forEach(p=>p.remove());
+  const evs=getCalEvents();
+  const dayEvs=evs[dateStr]||[];
+  const parts=dateStr.split('-');
+  const mnames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const label=parseInt(parts[2])+' de '+mnames[parseInt(parts[1])-1]+' '+parts[0];
+
+  const panel=document.createElement('div');
+  panel.className='day-panel';
+  panel.style.cssText='position:fixed;bottom:60px;left:50%;transform:translateX(-50%);width:min(420px,calc(100vw - 24px));background:#0D1117;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:300;box-shadow:0 -4px 40px rgba(0,0,0,.6);animation:slideUp .22s cubic-bezier(.34,1.56,.64,1);overflow:hidden;';
+
+  // Header
+  const hdr=document.createElement('div');
+  hdr.style.cssText='padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;';
+  hdr.innerHTML='<span style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;font-weight:700;color:#E8EAED;">📅 '+label+'</span>';
+  const closeBtn=document.createElement('button');
+  closeBtn.innerHTML='✕';
+  closeBtn.style.cssText='background:none;border:none;color:#6B7280;cursor:pointer;font-size:1rem;padding:2px 6px;';
+  closeBtn.onclick=()=>panel.remove();
+  hdr.appendChild(closeBtn);
+  panel.appendChild(hdr);
+
+  // Events list
+  if(dayEvs.length){
+    const evList=document.createElement('div');
+    evList.style.cssText='padding:6px 16px;max-height:120px;overflow-y:auto;';
+    dayEvs.forEach(e=>{
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);';
+      row.innerHTML='<div style="width:8px;height:8px;border-radius:50%;background:'+e.color+';box-shadow:0 0 6px '+e.color+';flex-shrink:0;"></div><div style="font-size:.78rem;color:#C9D1D9;flex:1;">'+e.label+'</div>';
+      if(e.id!==undefined){
+        const editBtn=document.createElement('button');
+        editBtn.innerHTML='✏️';
+        editBtn.style.cssText='background:none;border:none;color:#6B7280;cursor:pointer;font-size:.75rem;';
+        editBtn.onclick=()=>{openModal('aa',e.id);panel.remove();};
+        row.appendChild(editBtn);
+      }
+      evList.appendChild(row);
+    });
+    panel.appendChild(evList);
+  } else {
+    const empty=document.createElement('div');
+    empty.style.cssText='padding:8px 16px 4px;font-size:.72rem;color:#4B5563;';
+    empty.textContent='Nenhum evento — adicione abaixo';
+    panel.appendChild(empty);
+  }
+
+  // Add form
+  const form=document.createElement('div');
+  form.style.cssText='padding:10px 16px 14px;display:flex;gap:8px;align-items:center;';
+  const input=document.createElement('input');
+  input.id='day-panel-input';
+  input.placeholder='Nome do evento...';
+  input.style.cssText='flex:1;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:9px 12px;color:#E8EAED;font-size:.82rem;font-family:inherit;outline:none;';
+  input.onkeydown=e=>{if(e.key==='Enter')addDayEvent(dateStr);};
+
+  const sel=document.createElement('select');
+  sel.id='day-panel-cat';
+  sel.style.cssText='background:rgba(20,27,40,1);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:9px 6px;color:#E8EAED;font-size:.72rem;outline:none;';
+  [['Eventos','📅 Evento'],['Reunioes','🤝 Reunião'],['Bancas','🏛️ Banca'],['Palestras','🎤 Palestra'],['Artigos','📄 Artigo'],['Outros','📌 Outro']].forEach(([v,l])=>{
+    const opt=document.createElement('option');
+    opt.value=v; opt.textContent=l; sel.appendChild(opt);
+  });
+
+  const addBtn=document.createElement('button');
+  addBtn.innerHTML='＋';
+  addBtn.style.cssText='width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#00D4FF,#A855F7);color:#050810;font-size:1.2rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(0,212,255,.3);flex-shrink:0;';
+  addBtn.onclick=()=>addDayEvent(dateStr);
+
+  form.appendChild(input); form.appendChild(sel); form.appendChild(addBtn);
+  panel.appendChild(form);
+  document.body.appendChild(panel);
+  setTimeout(()=>input.focus(),100);
+  setTimeout(()=>document.addEventListener('click',function c(e){
+    if(!panel.contains(e.target)&&!e.target.closest('.cd')){panel.remove();document.removeEventListener('click',c);}
+  }),200);
+}
+
+function addDayEvent(dateStr){
+  const input=document.getElementById('day-panel-input');
+  const sel=document.getElementById('day-panel-cat');
+  const name=input?.value?.trim();
+  if(!name){input?.focus();return;}
+  if(!DATA_AA)DATA_AA=[];
+  DATA_AA.push({id:nAAId++,name,cat:sel?.value||'Eventos',status:'agendado',
+    data:dateStr,urgency:'media',pct:0,files:[],team:[],dates:[],notas:'Criado na agenda'});
+  saveData();
+  toast('✅ '+name.slice(0,30));
+  document.querySelector('.day-panel')?.remove();
+  renderAgenda();
+}
 function chM(d){calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}window._selDay=null;renderAgenda();}
 
 // ════════════ PERFIL ════════════
@@ -11572,23 +11665,20 @@ function processAIActions(aiText, userText){
   if(lower.includes('agenda') || lower.includes('agendar') || lower.includes('marcar') || lower.includes('programar')){
     if(aiLower.includes('agendado') || aiLower.includes('programad') || aiLower.includes('adicionei')){
       // Extract dates from text (user message and AI response combined)
-      // Try user message first (more reliable), then AI response
       const fullText = userText + ' ' + aiText;
-      // Also try to find dates directly in userText
-      const userDateMatch = userText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i)
-                         || userText.match(/(dias?)\s+(\d{1,2})\s+a\s+(\d{1,2})/i);
-      const dateMatch = fullText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i)
-                     || fullText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      // Parse date range: "18 a 23 de maio" or "dias 18 a 23 de maio"
+      const dateMatch = fullText.match(/(\d{1,2})\s+[ae]\s+(\d{1,2})\s+de\s+(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i)
+                     || fullText.match(/dia\s+(\d{1,2})\s+de\s+(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i);
       const yearMatch = fullText.match(/\b(202\d)\b/);
       const year = yearMatch ? yearMatch[1] : new Date().getFullYear();
-      
       let startDate = new Date().toISOString().slice(0,10);
       let endDate = null;
-      if(dateMatch && dateMatch[3] && isNaN(dateMatch[3])){
-        // Format: DD a DD de mês
-        const m = getMonthNum(dateMatch[3]);
+      if(dateMatch){
+        const m = getMonthNum(dateMatch[3]||dateMatch[2]);
         startDate = `${year}-${m}-${String(dateMatch[1]).padStart(2,'0')}`;
-        endDate   = `${year}-${m}-${String(dateMatch[2]).padStart(2,'0')}`;
+        if(dateMatch[2] && !isNaN(dateMatch[2])){
+          endDate = `${year}-${m}-${String(dateMatch[2]).padStart(2,'0')}`;
+        }
       }
       
       const taskText = userText.replace(/^(agende[i]?|agendar|marque[i]?|marcar|programe?[i]?)\s+/i,'').trim();
