@@ -722,15 +722,18 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 }
 /* Student card */
 .oc{
-  background:rgba(13,17,23,.9);
-  border:1px solid rgba(0,212,255,.12);
-  border-radius:14px;
+  background:#0D1117;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
   overflow:hidden;
-  transition:box-shadow .2s;
+  transition:all .2s;
   position:relative;
+  margin-bottom:14px;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
 }
+.oc:hover{box-shadow:0 4px 24px rgba(0,0,0,.6);}
 .oc:hover{box-shadow:0 4px 20px rgba(0,0,0,.08);}
-.oc-bar{height:4px;width:100%;}
+.oc-bar{height:5px;width:100%;opacity:.9;}
 .oc-head{
   padding:14px 14px 10px;
   display:flex;gap:12px;align-items:flex-start;
@@ -6690,6 +6693,29 @@ function openOrient(){
   setCC('#0D1117');
   show('s-orient');
   renderOrient();
+  // Auto-sync aluno data from Firebase
+  syncAlunoProgress();
+}
+
+function syncAlunoProgress(){
+  if(!FIREBASE_MODE || typeof db === 'undefined') return;
+  ORIENTANDOS.forEach(o=>{
+    if(!o.inviteCode) return;
+    db.collection('convites').doc(o.inviteCode).get()
+    .then(doc=>{
+      if(!doc.exists) return;
+      const data = doc.data();
+      if(data.aluno_progress){
+        // Update local orientando data
+        const prog = data.aluno_progress;
+        if(prog.pct !== undefined) o.pct = prog.pct;
+        if(prog.metas) o.metas = prog.metas;
+        if(prog.notas) o.notas = prog.notas;
+        if(prog.ultima_atualizacao) o.ultimaAtualizacao = prog.ultima_atualizacao;
+      }
+    }).catch(e=>console.warn('Sync aluno:', e));
+  });
+  setTimeout(()=>renderOrient(), 1500);
 }
 
 // ── RENDER MAIN SCREEN ──
@@ -6716,13 +6742,14 @@ function renderOrient(){
     const urgente = diasRestantes !== null && diasRestantes <= 30;
 
     return `
-      <div class="oc">
+      <div class="oc" style="border-color:${o.cor}33;">
         <div class="oc-bar" style="background:${o.cor}"></div>
         <div class="oc-head">
-          <div class="oc-av" style="background:${o.cor}">${o.avatar}</div>
+          <div class="oc-av" style="background:${o.cor}22;border:2px solid ${o.cor};box-shadow:0 0 12px ${o.cor}44;color:${o.cor};font-weight:800;">${o.avatar}</div>
           <div class="oc-info">
             <div class="oc-name">${o.nome}</div>
             <div class="oc-nivel">${o.nivel} · ${o.programa}</div>
+            ${o.ultimaAtualizacao ? `<div style="font-size:.62rem;color:#00FF8877;margin-top:2px;">🔄 Atualizado: ${new Date(o.ultimaAtualizacao).toLocaleDateString('pt-BR')}</div>` : ''}
             <div style="font-size:.7rem;color:#6B7280;margin-top:2px;font-style:italic;line-height:1.3;">${o.tema.slice(0,70)}${o.tema.length>70?'...':''}</div>
           </div>
         </div>
