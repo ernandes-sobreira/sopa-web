@@ -50,7 +50,7 @@ body{background:var(--bg);font-family:var(--ff);color:var(--tx);min-height:100vh
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* SCREENS */
-.sc{height:calc(100vh - 56px - 48px);display:none;animation:fi .2s ease;position:relative;z-index:1;}.sc.on{height:calc(100vh - 56px - 48px);overflow-y:auto;display:block;}
+.sc{height:calc(100vh - 56px - 48px);display:none;animation:fi .2s ease;position:relative;z-index:1;}.sc.on{height:calc(100vh - 56px - 48px);overflow-y:auto;display:block;}.sc.on[style*="flex"]{display:flex!important;}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes pls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
@@ -2162,7 +2162,7 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 <div id="s-dash" class="sc"><div id="dash-content"></div></div>
 
 <!-- ══ TELA: GMAIL ══ -->
-<div id="s-gmail" class="sc"><div id="gmail-content"></div></div>
+<div id="s-gmail" class="sc" style="overflow:hidden;display:none;flex-direction:column;"></div>
 
 <!-- ══ TELA: CONSULTORIA ══ -->
 <div id="s-consultoria" class="sc"><div id="consultoria-content"></div></div>
@@ -4009,17 +4009,22 @@ function renderAgenda(){
         <span style="font-size:.62rem;color:var(--mu)">${e.desc}</span>
       </div>
     </div>
-    ${e.id!==undefined?`<button onclick="openModal('aa',${e.id})" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;color:#9CA3AF;font-size:.65rem;cursor:pointer;flex-shrink:0;">✏️</button>`:''}
+    <div style="display:flex;gap:4px;flex-shrink:0;">
+      ${e.id!==undefined?`<button onclick="openModal('aa',${e.id})" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;color:#9CA3AF;font-size:.65rem;cursor:pointer;">✏️</button>`:''}
+      ${e.id!==undefined?`<button onclick="if(confirm('Apagar?')){DATA_AA=DATA_AA.filter(i=>i.id!==${e.id});saveData();renderAgenda();}" style="background:none;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 8px;color:#EF4444;font-size:.65rem;cursor:pointer;">🗑️</button>`:''}
+    </div>
   </div>`).join(''):
     `<div style="text-align:center;padding:16px;color:var(--mu);font-size:.78rem">Nenhum evento neste dia</div>`;
   const allEvs=[];Object.entries(evs).forEach(([date,es])=>es.forEach(e=>allEvs.push({date,...e})));
   allEvs.sort((a,b)=>a.date.localeCompare(b.date));
   const futEvs=allEvs.filter(e=>e.date>=hoje);
-  const uH=futEvs.slice(0,15).map(e=>`<div class="wr0">
-    <div style="width:10px;height:10px;border-radius:50%;background:${e.color};flex-shrink:0"></div>
+  const uH=futEvs.slice(0,15).map(e=>`<div class="wr0" style="gap:8px;">
+    <div style="width:10px;height:10px;border-radius:50%;background:${e.color};box-shadow:0 0 5px ${e.color}88;flex-shrink:0"></div>
     <div style="flex:1"><div style="font-size:.76rem;font-weight:700;line-height:1.3">${e.label.slice(0,48)}${e.label.length>48?'…':''}</div>
-      <div style="font-size:.63rem;color:var(--mu)">${e.cat} · ${e.desc}</div></div>
-    <span style="font-family:var(--fm);font-size:.59rem;color:var(--mu);white-space:nowrap">${e.date}</span>
+      <div style="font-size:.63rem;color:var(--mu)">${e.cat} · ${e.date}</div></div>
+    ${e.id!==undefined?`<button onclick="DATA_AA=DATA_AA.filter(i=>i.id!==${e.id});saveData();renderAgenda();toast('🗑️ Apagado')"
+      style="background:none;border:none;color:#EF444488;cursor:pointer;font-size:.8rem;padding:2px 4px;"
+      title="Apagar">✕</button>`:''}
   </div>`).join('')||'<div class="es"><div class="ei">✅</div><p>Sem eventos futuros.</p></div>';
   // Count urgent alerts for badge
   const _urgAlerts = getUrgentAlerts(14);
@@ -10718,8 +10723,75 @@ let _gmailCursor  = null;
 function openGmail(){
   setCC('#FF4B6E');
   show('s-gmail');
-  renderGmailShell();
-  fetchGmailEmails();
+  const el = document.getElementById('s-gmail');
+  if(!el) return;
+  // Check if iframe already exists
+  if(el.querySelector('iframe')) return;
+  el.style.cssText = 'display:flex!important;flex-direction:column;height:calc(100vh - 56px - 48px);overflow:hidden;';
+  el.innerHTML = `
+    <div style="padding:10px 16px 6px;display:flex;align-items:center;justify-content:space-between;
+      border-bottom:1px solid rgba(255,255,255,.06);background:#0D1117;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" style="width:20px;height:20px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;color:#E8EAED;">Gmail</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('gmail-iframe').src='https://mail.google.com/mail/u/0/#compose'"
+          style="background:rgba(255,75,110,.15);border:1px solid rgba(255,75,110,.3);border-radius:8px;
+          padding:5px 12px;color:#FF4B6E;font-size:.72rem;font-weight:700;cursor:pointer;">
+          ✉️ Novo email
+        </button>
+        <button onclick="document.getElementById('gmail-iframe').src='https://mail.google.com/mail/u/0/#inbox'"
+          style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+          padding:5px 12px;color:#9CA3AF;font-size:.72rem;cursor:pointer;">
+          🔄 Inbox
+        </button>
+      </div>
+    </div>
+    <div style="flex:1;position:relative;">
+      <iframe id="gmail-iframe"
+        src="https://mail.google.com/mail/u/0/#inbox"
+        style="width:100%;height:100%;border:none;display:block;"
+        allow="clipboard-read; clipboard-write">
+      </iframe>
+      <div id="gmail-blocked" style="display:none;position:absolute;inset:0;
+        background:#0D1117;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div style="font-size:3rem;">📧</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#E8EAED;font-weight:700;">Gmail bloqueou o carregamento</div>
+        <div style="font-size:.75rem;color:#6B7280;text-align:center;max-width:320px;">
+          O Gmail não permite ser embutido por segurança.<br>Clique abaixo para abrir em nova aba.
+        </div>
+        <button onclick="window.open('https://mail.google.com','_blank')"
+          style="background:linear-gradient(135deg,#FF4B6E,#FF6B35);border:none;border-radius:10px;
+          padding:10px 24px;color:white;font-weight:700;cursor:pointer;font-size:.85rem;">
+          Abrir Gmail
+        </button>
+        <div style="font-size:.65rem;color:#4B5563;">
+          Dica: instale o SOPA como app (PWA) para melhor integração
+        </div>
+      </div>
+    </div>
+  `;
+  // Detect if iframe is blocked
+  const iframe = document.getElementById('gmail-iframe');
+  if(iframe){
+    iframe.onerror = ()=>{
+      document.getElementById('gmail-blocked').style.display='flex';
+    };
+    iframe.onload = ()=>{
+      try{
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if(!doc || doc.URL === 'about:blank'){
+          document.getElementById('gmail-blocked').style.display='flex';
+        }
+      } catch(e){
+        // Cross-origin blocked — show fallback
+        setTimeout(()=>{
+          document.getElementById('gmail-blocked').style.display='flex';
+        }, 2000);
+      }
+    };
+  }
 }
 
 function renderGmailShell(){
