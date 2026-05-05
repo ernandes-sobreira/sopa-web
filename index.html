@@ -2896,7 +2896,7 @@ function showNodeMenu(d, event){
 // ── UNIVERSO — TODOS OS MÓDULOS ──
 const HNODES = [
   {id:'prof',        label:'Ernandes',    sub:'UNEMAT',        r:46, color:'#00D4FF', type:'center', action:()=>openPerfil()},
-  {id:'pesquisa',    label:'Pesquisa',    sub:'artigos',       r:34, color:'#00D4FF', type:'main',   action:()=>openProducao('artigos')},
+  {id:'pesquisa',    label:'Artigos',     sub:'publicações',   r:34, color:'#00D4FF', type:'main',   action:()=>openProducao('artigos')},
   {id:'projetos',    label:'Projetos',    sub:'ativos',        r:34, color:'#38BDF8', type:'main',   action:()=>openList('proj')},
   {id:'orientacao',  label:'Orientação',  sub:'alunos',        r:34, color:'#00FF88', type:'main',   action:()=>openOrient()},
   {id:'agenda',      label:'Agenda',      sub:'prazos',        r:34, color:'#FF4B6E', type:'main',   action:()=>openAgenda()},
@@ -12779,7 +12779,7 @@ const SIDEBAR_SECTIONS = [
     {icon:'✏️', label:'Diário',        sub:'captura rápida de notas',cor:'#00E5CC', action:'openDiario()'},
   ]},
   {title:'Produção Acadêmica', items:[
-    {icon:'📄', label:'Artigos',       sub:'publicações científicas',cor:'#00D4FF', action:"openProducao('artigos')"},
+    {icon:'📄', label:'Artigos & Pesquisa', sub:'publicações e Lattes',cor:'#00D4FF', action:"openProducao('artigos')"},
     {icon:'🎤', label:'Palestras',     sub:'eventos e apresentações',cor:'#FACC15', action:'openPalestras()'},
     {icon:'📰', label:'Citações',      sub:'Scholar · h-index',      cor:'#FACC15', action:'openCitacoes()'},
     {icon:'🕸️', label:'Redes',        sub:'coautoria',               cor:'#00E5CC', action:'openRedes()'},
