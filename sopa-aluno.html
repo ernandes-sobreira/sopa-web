@@ -771,8 +771,8 @@ function buildHomeGraph(){
      ]},
 
     {id:'orient', label: p.orientador_nome ? p.orientador_nome.split(' ').slice(-1)[0] : 'Orientador',
-     sub: p.orientador_email ? '🔗 vinculado' : 'não vinculado',
-     r:30, color: p.orientador_email ? '#38BDF8' : '#4B5563', type:'sat',
+     sub: p.orientador_email ? '🔗 vinculado' : 'vincular →',
+     r:30, color: p.orientador_email ? '#38BDF8' : '#F59E0B', type:'sat',
      action:()=>{ if(!p.orientador_email) showScreen('perfil'); else shareProfile(); }},
   ];
 
@@ -1614,7 +1614,17 @@ async function checkAccess(user){
           }
           return true;
         }
-        // Código inválido ou já usado por outro
+        // Código já usado por outro - mas se existe, ainda permite acesso
+        // e carrega info do orientador
+        if(snap.exists){
+          if(snap.data().orientador_email){
+            STATE.perfil.orientador_email = STATE.perfil.orientador_email || snap.data().orientador_email;
+            STATE.perfil.orientador_nome  = STATE.perfil.orientador_nome  || snap.data().orientador_nome || 'Prof. Dr. Ernandes Sobreira';
+            autoSave();
+          }
+          localStorage.setItem('sopa_aluno_autorizado_'+user.uid, '1');
+          return true;
+        }
         return false;
       }catch(e){
         // Firebase error → checar localStorage como fallback
