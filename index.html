@@ -10725,295 +10725,246 @@ function openGmail(){
   show('s-gmail');
   const el = document.getElementById('s-gmail');
   if(!el) return;
-  el.style.cssText = 'display:flex!important;flex-direction:column;height:calc(100vh - 56px - 48px);overflow:hidden;';
+  el.style.cssText = 'display:flex!important;flex-direction:column;height:calc(100vh - 56px - 48px);overflow:hidden;background:#0D1117;';
 
-  // Already initialized
-  if(window._gmailReady){ renderGmailUI(); return; }
-
-  // Load Google API
-  if(!document.getElementById('gapi-script')){
-    const s = document.createElement('script');
-    s.id = 'gapi-script';
-    s.src = 'https://apis.google.com/js/api.js';
-    s.onload = ()=>{
-      gapi.load('client:auth2', ()=>{
-        gapi.client.init({
-          clientId: '962393498465-amv7gabnhgj8k60olkfe3aa2dc41vfpq.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/gmail.modify',
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest']
-        }).then(()=>{
-          window._gmailReady = true;
-          if(gapi.auth2.getAuthInstance().isSignedIn.get()){
-            window._gmailUser = gapi.auth2.getAuthInstance().currentUser.get();
-            renderGmailUI();
-            loadGmailMessages();
-          } else {
-            renderGmailLogin();
-          }
-        }).catch(e=>renderGmailError(e.error||e.details||'Erro ao iniciar Gmail'));
-      });
-    };
-    s.onerror = ()=>renderGmailError('Falha ao carregar Google API');
-    document.head.appendChild(s);
-  } else if(window._gmailReady){
-    renderGmailUI();
-    loadGmailMessages();
+  // Load Google Identity Services if not loaded
+  if(!window.google?.accounts?.oauth2){
+    if(!document.getElementById('gis-script')){
+      const s = document.createElement('script');
+      s.id = 'gis-script';
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onload = ()=>{ renderGmailUI(); };
+      s.onerror = ()=>renderGmailError('Falha ao carregar Google Identity');
+      document.head.appendChild(s);
+    }
+    renderGmailLoading();
+    return;
   }
-  renderGmailLoading();
+
+  renderGmailUI();
+}
+
+function gmailGetToken(callback){
+  if(window._gmailAccessToken){
+    callback(window._gmailAccessToken);
+    return;
+  }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: '962393498465-amv7gabnhgj8k60olkfe3aa2dc41vfpq.apps.googleusercontent.com',
+    scope: 'https://www.googleapis.com/auth/gmail.modify',
+    callback: (resp)=>{
+      if(resp.error){ renderGmailError('Erro de autenticação: '+resp.error); return; }
+      window._gmailAccessToken = resp.access_token;
+      // Token expires in ~1h, clear it
+      setTimeout(()=>{ window._gmailAccessToken = null; }, (resp.expires_in-60)*1000);
+      callback(resp.access_token);
+    }
+  });
+  client.requestAccessToken();
 }
 
 function renderGmailLoading(){
   const el = document.getElementById('s-gmail');
   if(!el) return;
-  el.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;">' +
-    '<div style="font-size:2.5rem;animation:spin 1s linear infinite">⚙️</div>' +
-    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;color:#6B7280;">Carregando Gmail...</div>' +
-    '</div>';
-}
-
-function renderGmailLogin(){
-  const el = document.getElementById('s-gmail');
-  if(!el) return;
-  el.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;">' +
-    '<img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" style="width:48px;height:48px;">' +
-    '<div style="font-size:1.1rem;font-weight:700;color:#E8EAED;">Conectar Gmail</div>' +
-    '<div style="font-size:.8rem;color:#6B7280;text-align:center;max-width:280px;">Faça login com sua conta Google para ver e responder emails no SOPA</div>' +
-    '<button onclick="gmailSignIn()" style="background:linear-gradient(135deg,#FF4B6E,#FF6B35);border:none;border-radius:12px;padding:12px 28px;color:white;font-weight:700;font-size:.9rem;cursor:pointer;box-shadow:0 4px 16px rgba(255,75,110,.3);">Entrar com Google</button>' +
-    '</div>';
+  el.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;"><div style="font-size:2rem;animation:spin 1s linear infinite">⚙️</div><div style="font-size:.8rem;color:#6B7280;">Carregando...</div></div>';
 }
 
 function renderGmailError(msg){
   const el = document.getElementById('s-gmail');
   if(!el) return;
-  el.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">' +
-    '<div style="font-size:2rem;">⚠️</div>' +
-    '<div style="font-size:.8rem;color:#EF4444;text-align:center;max-width:300px;">'+msg+'</div>' +
-    '<button onclick="openGmail()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 16px;color:#E8EAED;cursor:pointer;font-size:.8rem;">Tentar novamente</button>' +
-    '</div>';
-}
-
-function gmailSignIn(){
-  if(!window._gmailReady){ openGmail(); return; }
-  gapi.auth2.getAuthInstance().signIn().then(user=>{
-    window._gmailUser = user;
-    renderGmailUI();
-    loadGmailMessages();
-  }).catch(e=>{ if(e.error!=='popup_closed_by_user') toast('Erro: '+e.error); });
-}
-
-function gmailSignOut(){
-  if(!window._gmailReady) return;
-  gapi.auth2.getAuthInstance().signOut().then(()=>{
-    window._gmailUser = null;
-    window._gmailMessages = [];
-    renderGmailLogin();
-  });
+  el.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;"><div style="font-size:2rem;">⚠️</div><div style="font-size:.8rem;color:#EF4444;text-align:center;max-width:300px;">'+msg+'</div><button onclick="openGmail()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 16px;color:#E8EAED;cursor:pointer;font-size:.8rem;">Tentar novamente</button></div>';
 }
 
 window._gmailMessages = [];
-window._gmailTab = 'inbox';
+window._gmailTab = 'INBOX';
 window._gmailSearch = '';
+window._gmailAccessToken = null;
 
 function renderGmailUI(){
   const el = document.getElementById('s-gmail');
   if(!el) return;
-  const user = gapi.auth2?.getAuthInstance()?.currentUser?.get();
-  const email = user?.getBasicProfile()?.getEmail() || '';
-  const avatar = user?.getBasicProfile()?.getImageUrl() || '';
-
   el.innerHTML = '';
-  el.style.cssText = 'display:flex!important;flex-direction:column;height:calc(100vh - 56px - 48px);overflow:hidden;background:#0D1117;';
 
   // Header
   const hdr = document.createElement('div');
-  hdr.style.cssText = 'padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-shrink:0;background:#0D1117;';
+  hdr.style.cssText = 'padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-shrink:0;';
   hdr.innerHTML =
     '<img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" style="width:20px;height:20px;">' +
-    '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.78rem;font-weight:700;color:#E8EAED;flex:1;">Gmail</span>' +
-    (avatar ? '<img src="'+avatar+'" style="width:26px;height:26px;border-radius:50%;" title="'+email+'">' : '') +
+    '<span style="font-family:monospace;font-size:.78rem;font-weight:700;color:#E8EAED;flex:1;">Gmail</span>' +
     '<button onclick="gmailCompose()" style="background:linear-gradient(135deg,#FF4B6E,#A855F7);border:none;border-radius:8px;padding:6px 14px;color:white;font-size:.72rem;font-weight:700;cursor:pointer;">✉️ Novo</button>' +
-    '<button onclick="loadGmailMessages()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;color:#9CA3AF;font-size:.75rem;cursor:pointer;" title="Atualizar">🔄</button>' +
-    '<button onclick="gmailSignOut()" style="background:none;border:none;color:#4B5563;font-size:.7rem;cursor:pointer;" title="Sair">Sair</button>';
+    '<button onclick="loadGmailMessages()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;color:#9CA3AF;font-size:.75rem;cursor:pointer;">🔄</button>' +
+    '<button onclick="window._gmailAccessToken=null;window._gmailMessages=[];renderGmailUI();" style="background:none;border:none;color:#4B5563;font-size:.7rem;cursor:pointer;">Sair</button>';
   el.appendChild(hdr);
 
   // Search
   const srch = document.createElement('div');
   srch.style.cssText = 'padding:8px 16px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;';
-  srch.innerHTML = '<input id="gmail-search" placeholder="Buscar emails..." value="'+window._gmailSearch+'" ' +
-    'style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:7px 12px;color:#E8EAED;font-size:.8rem;font-family:inherit;outline:none;box-sizing:border-box;" ' +
-    'oninput="window._gmailSearch=this.value;clearTimeout(window._gmailTimer);window._gmailTimer=setTimeout(loadGmailMessages,500)">';
+  srch.innerHTML = '<input id="gmail-search" placeholder="Buscar emails..." value="'+window._gmailSearch+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:7px 12px;color:#E8EAED;font-size:.8rem;font-family:inherit;outline:none;box-sizing:border-box;" oninput="window._gmailSearch=this.value;clearTimeout(window._gmailTimer);window._gmailTimer=setTimeout(loadGmailMessages,600)">';
   el.appendChild(srch);
 
   // Tabs
   const tabs = document.createElement('div');
   tabs.style.cssText = 'display:flex;gap:4px;padding:8px 16px;flex-shrink:0;';
-  [['inbox','📥 Inbox'],['sent','📤 Enviados'],['unread','🔵 Não lidos']].forEach(([k,l])=>{
+  [['INBOX','📥 Inbox'],['SENT','📤 Enviados'],['UNREAD','🔵 Não lidos']].forEach(([k,l])=>{
     const btn = document.createElement('button');
-    btn.style.cssText = 'padding:5px 12px;border-radius:8px;border:none;cursor:pointer;font-size:.7rem;font-weight:700;font-family:\'JetBrains Mono\',monospace;transition:all .15s;' +
+    btn.style.cssText = 'padding:5px 12px;border-radius:8px;border:none;cursor:pointer;font-size:.7rem;font-weight:700;font-family:monospace;transition:all .15s;' +
       (window._gmailTab===k ? 'background:rgba(255,75,110,.2);color:#FF4B6E;' : 'background:rgba(255,255,255,.05);color:#6B7280;');
     btn.textContent = l;
-    btn.onclick = ()=>{ window._gmailTab=k; openGmail(); };
+    btn.onclick = ()=>{ window._gmailTab=k; loadGmailMessages(); };
     tabs.appendChild(btn);
   });
   el.appendChild(tabs);
 
-  // Messages list
+  // List container
   const list = document.createElement('div');
   list.id = 'gmail-list';
   list.style.cssText = 'flex:1;overflow-y:auto;';
-  if(!window._gmailMessages.length){
-    list.innerHTML = '<div style="text-align:center;padding:32px;color:#4B5563;font-size:.8rem;">Carregando...</div>';
-  } else {
-    renderGmailMessages(list);
-  }
+  list.innerHTML = '<div style="text-align:center;padding:32px;color:#4B5563;font-size:.8rem;"><div style="font-size:2rem;margin-bottom:12px;">📧</div>Clique em 🔄 para carregar emails<br><small style="color:#374151;">Você precisará fazer login com Google</small></div>';
   el.appendChild(list);
+
+  // Auto-load if has token
+  if(window._gmailAccessToken) loadGmailMessages();
 }
 
-function renderGmailMessages(container){
-  if(!container) container = document.getElementById('gmail-list');
+function loadGmailMessages(){
+  const listEl = document.getElementById('gmail-list');
+  if(listEl) listEl.innerHTML = '<div style="text-align:center;padding:32px;color:#4B5563;font-size:.8rem;"><div style="font-size:1.5rem;animation:spin 1s linear infinite">⚙️</div></div>';
+
+  gmailGetToken(token=>{
+    const q = window._gmailSearch;
+    let url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25';
+    if(q) url += '&q='+encodeURIComponent(q);
+    else url += '&labelIds='+window._gmailTab;
+
+    fetch(url, {headers:{Authorization:'Bearer '+token}})
+    .then(r=>r.json())
+    .then(data=>{
+      const msgs = data.messages||[];
+      if(!msgs.length){ renderGmailList([]); return; }
+      // Fetch metadata for each
+      Promise.all(msgs.slice(0,20).map(m=>
+        fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date',
+          {headers:{Authorization:'Bearer '+token}}).then(r=>r.json())
+      )).then(results=>{
+        window._gmailMessages = results.map(msg=>{
+          const getH = n=>(msg.payload?.headers||[]).find(h=>h.name===n)?.value||'';
+          return {...msg, _from:getH('From'), _subject:getH('Subject'), _date:msg.internalDate};
+        });
+        renderGmailList(window._gmailMessages);
+      });
+    }).catch(e=>{ window._gmailAccessToken=null; renderGmailError('Erro ao carregar: '+e.message); });
+  });
+}
+
+function renderGmailList(msgs){
+  const container = document.getElementById('gmail-list');
   if(!container) return;
-  const msgs = window._gmailMessages;
   if(!msgs.length){ container.innerHTML='<div style="text-align:center;padding:32px;color:#4B5563;font-size:.8rem;">Nenhum email encontrado</div>'; return; }
   container.innerHTML = '';
   msgs.forEach(m=>{
-    const row = document.createElement('div');
-    const isUnread = m.labelIds && m.labelIds.includes('UNREAD');
-    row.style.cssText = 'padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;' + (isUnread?'background:rgba(255,75,110,.04);':'');
-    row.onmouseover=()=>row.style.background='rgba(255,255,255,.04)';
-    row.onmouseout=()=>row.style.background=isUnread?'rgba(255,75,110,.04)':'transparent';
-
+    const isUnread = (m.labelIds||[]).includes('UNREAD');
     const from = (m._from||'').replace(/<.*>/,'').trim().slice(0,22);
     const subj = m._subject||'(sem assunto)';
-    const snippet = m.snippet||'';
     const date = m._date ? new Date(parseInt(m._date)).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '';
-
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;'+(isUnread?'background:rgba(255,75,110,.04);':'');
+    row.onmouseover=()=>row.style.background='rgba(255,255,255,.05)';
+    row.onmouseout=()=>row.style.background=isUnread?'rgba(255,75,110,.04)':'transparent';
     row.innerHTML =
-      '<div style="width:8px;height:8px;border-radius:50%;background:'+(isUnread?'#FF4B6E':'transparent')+';flex-shrink:0;margin-top:5px;"></div>' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="display:flex;justify-content:space-between;gap:8px;">' +
-          '<span style="font-size:.78rem;font-weight:'+(isUnread?'700':'500')+';color:'+(isUnread?'#E8EAED':'#9CA3AF')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">'+from+'</span>' +
-          '<span style="font-size:.65rem;color:#4B5563;flex-shrink:0;">'+date+'</span>' +
-        '</div>' +
-        '<div style="font-size:.76rem;font-weight:'+(isUnread?'700':'400')+';color:'+(isUnread?'#C9D1D9':'#6B7280')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+subj+'</div>' +
-        '<div style="font-size:.68rem;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+snippet.slice(0,80)+'</div>' +
+      '<div style="width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;background:'+(isUnread?'#FF4B6E':'transparent')+'"></div>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="display:flex;justify-content:space-between;">'+
+          '<span style="font-size:.78rem;font-weight:'+(isUnread?700:500)+';color:'+(isUnread?'#E8EAED':'#9CA3AF')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">'+from+'</span>'+
+          '<span style="font-size:.65rem;color:#4B5563;flex-shrink:0;">'+date+'</span>'+
+        '</div>'+
+        '<div style="font-size:.76rem;font-weight:'+(isUnread?700:400)+';color:'+(isUnread?'#C9D1D9':'#6B7280')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+subj+'</div>'+
+        '<div style="font-size:.68rem;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(m.snippet||'').slice(0,80)+'</div>'+
       '</div>';
     row.onclick = ()=>openGmailMessage(m.id);
     container.appendChild(row);
   });
 }
 
-function loadGmailMessages(){
-  if(!window._gmailReady || !gapi.auth2?.getAuthInstance()?.isSignedIn?.get()) return;
-  const labelMap = {inbox:'INBOX', sent:'SENT', unread:'UNREAD'};
-  const label = labelMap[window._gmailTab]||'INBOX';
-  const q = window._gmailSearch ? window._gmailSearch : '';
-  gapi.client.gmail.users.messages.list({
-    userId:'me', maxResults:20,
-    labelIds: q ? undefined : [label],
-    q: q || undefined
-  }).then(r=>{
-    const msgs = r.result.messages||[];
-    if(!msgs.length){ window._gmailMessages=[]; renderGmailMessages(); return; }
-    // Fetch headers for each message
-    Promise.all(msgs.map(m=>
-      gapi.client.gmail.users.messages.get({userId:'me',id:m.id,format:'metadata',
-        metadataHeaders:['From','Subject','Date']})
-    )).then(results=>{
-      window._gmailMessages = results.map(r=>{
-        const msg = r.result;
-        const getH = name => (msg.payload?.headers||[]).find(h=>h.name===name)?.value||'';
-        msg._from = getH('From');
-        msg._subject = getH('Subject');
-        msg._date = msg.internalDate;
-        return msg;
-      });
-      renderGmailMessages();
-    });
-  }).catch(e=>console.error('Gmail list error:',e));
-}
-
 function openGmailMessage(id){
-  if(!window._gmailReady) return;
-  gapi.client.gmail.users.messages.get({userId:'me',id,format:'full'}).then(r=>{
-    const msg = r.result;
-    const getH = name => (msg.payload?.headers||[]).find(h=>h.name===name)?.value||'';
-    const from = getH('From');
-    const subj = getH('Subject');
-    const date = new Date(parseInt(msg.internalDate)).toLocaleString('pt-BR');
-
-    // Get body
-    let body = '';
+  const token = window._gmailAccessToken;
+  if(!token){ loadGmailMessages(); return; }
+  fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+id+'?format=full',
+    {headers:{Authorization:'Bearer '+token}})
+  .then(r=>r.json())
+  .then(msg=>{
+    const getH = n=>(msg.payload?.headers||[]).find(h=>h.name===n)?.value||'';
+    const from=getH('From'), subj=getH('Subject');
+    window._gmailOpenFrom = (from.match(/<(.+?)>/)||[null,from])[1];
+    window._gmailOpenSubj = subj;
+    const date=new Date(parseInt(msg.internalDate)).toLocaleString('pt-BR');
+    // Extract body
+    let body='';
     function extractBody(part){
-      if(part.mimeType==='text/html' && part.body?.data) return atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'));
-      if(part.mimeType==='text/plain' && part.body?.data) return '<pre style="white-space:pre-wrap;font-family:inherit;">'+atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'))+'</pre>';
-      if(part.parts) for(const p of part.parts){ const b=extractBody(p); if(b) return b; }
+      if(!part) return '';
+      if(part.mimeType==='text/html'&&part.body?.data) return atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'));
+      if(part.mimeType==='text/plain'&&part.body?.data) return '<pre style="white-space:pre-wrap;font-family:inherit;font-size:.82rem;">'+atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'))+'</pre>';
+      if(part.parts) for(const p of part.parts){const b=extractBody(p);if(b)return b;}
       return '';
     }
-    body = extractBody(msg.payload) || msg.snippet;
-
+    body = extractBody(msg.payload)||msg.snippet||'';
     // Mark as read
-    gapi.client.gmail.users.messages.modify({userId:'me',id,resource:{removeLabelIds:['UNREAD']}}).then(()=>{
-      if(msg.labelIds) msg.labelIds = msg.labelIds.filter(l=>l!=='UNREAD');
-      renderGmailMessages();
-    });
+    fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+id+'/modify',
+      {method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+       body:JSON.stringify({removeLabelIds:['UNREAD']})});
 
-    // Show message modal
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(5,8,16,.92);display:flex;flex-direction:column;';
-    modal.innerHTML =
-      '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;background:#0D1117;flex-shrink:0;">' +
-        '<button onclick="this.closest(\'div[style*=\\\"fixed\\\"]\').remove()" style="background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:6px 12px;color:#9CA3AF;cursor:pointer;font-size:.8rem;">← Voltar</button>' +
-        '<div style="flex:1;font-size:.78rem;font-weight:700;color:#E8EAED;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+subj+'</div>' +
-        '<button onclick="gmailReply(\''+id+'\',\''+from.replace(/'/g,"\\'")+'\',\''+subj.replace(/'/g,"\\'")+'\');" style="background:rgba(255,75,110,.15);border:1px solid rgba(255,75,110,.3);border-radius:8px;padding:6px 12px;color:#FF4B6E;cursor:pointer;font-size:.75rem;font-weight:700;">↩️ Responder</button>' +
-      '</div>' +
-      '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;background:#0A0E1A;">' +
-        '<div style="font-size:.75rem;color:#E8EAED;font-weight:600;">'+from+'</div>' +
-        '<div style="font-size:.65rem;color:#4B5563;margin-top:2px;">'+date+'</div>' +
-      '</div>' +
+    const modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;z-index:500;background:#0A0E1A;display:flex;flex-direction:column;';
+    // fromEmail stored in window._gmailOpenFrom
+    modal.innerHTML=
+      '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;background:#0D1117;flex-shrink:0;">'+
+        '<button onclick="closeGmailModal();renderGmailList(window._gmailMessages);" style="background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:6px 12px;color:#9CA3AF;cursor:pointer;font-size:.8rem;">← Voltar</button>'+
+        '<div style="flex:1;font-size:.78rem;font-weight:700;color:#E8EAED;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+subj+'</div>'+
+        '<button onclick="window._gmailReplyData={to:window._gmailOpenFrom,subj:window._gmailOpenSubj};gmailCompose(window._gmailReplyData.to,window._gmailReplyData.subj)" style="background:rgba(255,75,110,.15);border:1px solid rgba(255,75,110,.3);border-radius:8px;padding:6px 12px;color:#FF4B6E;cursor:pointer;font-size:.75rem;font-weight:700;">↩️ Responder</button>'+
+      '</div>'+
+      '<div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;background:#0A0E1A;">'+
+        '<div style="font-size:.75rem;color:#E8EAED;font-weight:600;">'+from+'</div>'+
+        '<div style="font-size:.65rem;color:#4B5563;margin-top:2px;">'+date+'</div>'+
+      '</div>'+
       '<div style="flex:1;overflow-y:auto;padding:16px;color:#C9D1D9;font-size:.82rem;line-height:1.6;">'+body+'</div>';
     document.body.appendChild(modal);
-  });
+  }).catch(e=>toast('Erro: '+e.message));
 }
 
-function gmailCompose(replyTo, replySubj, replyThread){
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(5,8,16,.95);display:flex;flex-direction:column;';
-  modal.innerHTML =
-    '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;background:#0D1117;flex-shrink:0;">' +
-      '<button onclick="this.closest(\'div[style*=\\\"fixed\\\"]\').remove()" style="background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:6px 12px;color:#9CA3AF;cursor:pointer;">✕ Fechar</button>' +
-      '<div style="flex:1;font-family:\'JetBrains Mono\',monospace;font-size:.78rem;font-weight:700;color:#E8EAED;">'+(replyTo?'↩️ Responder':'✉️ Novo email')+'</div>' +
-      '<button onclick="gmailSend(this.closest(\'div[style*=\\\"fixed\\\"]\')" style="background:linear-gradient(135deg,#FF4B6E,#A855F7);border:none;border-radius:8px;padding:8px 18px;color:white;font-weight:700;cursor:pointer;">Enviar ✈️</button>' +
-    '</div>' +
-    '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">' +
-      '<input id="compose-to" placeholder="Para..." value="'+(replyTo||'')+'" style="background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#E8EAED;font-size:.82rem;font-family:inherit;outline:none;">' +
-      '<input id="compose-subject" placeholder="Assunto..." value="'+(replySubj?'Re: '+replySubj:'')+'" style="background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#E8EAED;font-size:.82rem;font-family:inherit;outline:none;">' +
-    '</div>' +
+function gmailCompose(replyTo, replySubj){
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;z-index:500;background:#0A0E1A;display:flex;flex-direction:column;';
+  modal.innerHTML=
+    '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;background:#0D1117;flex-shrink:0;">'+
+      '<button onclick="closeGmailModal()" style="background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:6px 12px;color:#9CA3AF;cursor:pointer;">✕</button>'+
+      '<div style="flex:1;font-family:monospace;font-size:.78rem;font-weight:700;color:#E8EAED;">'+(replyTo?'↩️ Responder':'✉️ Novo email')+'</div>'+
+      '<button id="btn-send-gmail" style="background:linear-gradient(135deg,#FF4B6E,#A855F7);border:none;border-radius:8px;padding:8px 18px;color:white;font-weight:700;cursor:pointer;">Enviar ✈️</button>'+
+    '</div>'+
+    '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">'+
+      '<input id="compose-to" placeholder="Para..." value="'+(replyTo||'')+'" style="background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#E8EAED;font-size:.82rem;font-family:inherit;outline:none;">'+
+      '<input id="compose-subj" placeholder="Assunto..." value="'+(replySubj?'Re: '+replySubj:'')+'" style="background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:#E8EAED;font-size:.82rem;font-family:inherit;outline:none;">'+
+    '</div>'+
     '<textarea id="compose-body" placeholder="Escreva sua mensagem..." style="flex:1;background:transparent;border:none;padding:16px;color:#C9D1D9;font-size:.85rem;font-family:inherit;outline:none;resize:none;line-height:1.6;"></textarea>';
-  if(replyThread) modal.dataset.threadId = replyThread;
   document.body.appendChild(modal);
+  document.getElementById('btn-send-gmail').onclick = ()=>gmailSend(modal);
   setTimeout(()=>document.getElementById(replyTo?'compose-body':'compose-to')?.focus(),100);
 }
 
-function gmailReply(id, from, subj){
-  // Extract email address from "Name <email@example.com>"
-  const emailMatch = from.match(/<(.+?)>/) || [null, from];
-  gmailCompose(emailMatch[1], subj, id);
-}
+function gmailReply(from, subj){ gmailCompose(from, subj); }
 
 function gmailSend(modal){
-  const to = document.getElementById('compose-to')?.value?.trim();
-  const subj = document.getElementById('compose-subject')?.value?.trim();
-  const body = document.getElementById('compose-body')?.value?.trim();
-  if(!to||!body){ toast('Preencha destinatário e mensagem'); return; }
-
-  const email = ['To: '+to,'Subject: '+subj,'Content-Type: text/plain; charset=utf-8','','',body].join('\r\n');
-  const encoded = btoa(unescape(encodeURIComponent(email))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-
-  gapi.client.gmail.users.messages.send({userId:'me',resource:{raw:encoded}}).then(()=>{
-    toast('✅ Email enviado!');
-    modal.remove();
-    loadGmailMessages();
-  }).catch(e=>{ toast('Erro ao enviar: '+(e.result?.error?.message||e)); });
+  const to=document.getElementById('compose-to')?.value?.trim();
+  const subj=document.getElementById('compose-subj')?.value?.trim();
+  const body=document.getElementById('compose-body')?.value?.trim();
+  if(!to||!body){toast('Preencha destinatário e mensagem');return;}
+  const token=window._gmailAccessToken;
+  if(!token){toast('Faça login no Gmail primeiro');return;}
+  const CRLF2='\r\n';const emailStr2='To: '+to+CRLF2+'Subject: '+(subj||'sem assunto')+CRLF2+'Content-Type: text/plain; charset=utf-8'+CRLF2+CRLF2+body;const raw=btoa(unescape(encodeURIComponent(emailStr2))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+    {method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+     body:JSON.stringify({raw})})
+  .then(r=>r.json())
+  .then(()=>{toast('✅ Email enviado!');modal.remove();loadGmailMessages();})
+  .catch(e=>toast('Erro ao enviar: '+e.message));
 }
 
 function renderGmailShell(){
@@ -12671,6 +12622,8 @@ function getMonthNum(monthName){
     julho:'07',agosto:'08',setembro:'09',outubro:'10',novembro:'11',dezembro:'12'};
   return months[(monthName||'').toLowerCase()] || '01';
 }
+
+function closeGmailModal(){ const m=document.querySelector('[style*="position:fixed;inset:0;z-index:500"]'); if(m) m.remove(); }
 </script>
 
 </body>
