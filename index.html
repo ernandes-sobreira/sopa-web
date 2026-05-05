@@ -2705,6 +2705,7 @@ $('dEl').textContent=DY[D.getDay()]+', '+D.getDate()+' '+MNS[D.getMonth()]+' '+D
 let PERFIL={nome:'',avatar:'m1',photo:null,curso:'PROFÁGUA — Recursos Hídricos',inst:'UNEMAT — Campus Cáceres, Jane Vanini',lattes:'http://lattes.cnpq.br/',orcid:'',bio:'',anim:true};
 
 function show(id){
+  if(window._stopDrift) window._stopDrift();
   document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));
   $(id).classList.add('on');
 }
@@ -2752,245 +2753,226 @@ function renderHome(){
 }
 
 function showNodeMenu(d, event){
-  // Remove existing menu
   document.querySelectorAll('.home-node-menu').forEach(m=>m.remove());
 
-  if(!d.subnodes && d.action){ d.action(); return; }
-  if(!d.subnodes){ return; }
+  if(!d.subnodes || !d.subnodes.length){
+    if(d.action) d.action();
+    return;
+  }
 
-  const svgRect = document.getElementById('home-svg').getBoundingClientRect();
-  // Get node screen position from transform
-  const nodeEl = event.currentTarget || event.target.closest('g');
+  // Position menu near the node
+  const svgEl = document.getElementById('home-svg');
+  const rect = svgEl ? svgEl.getBoundingClientRect() : {left:0,top:56};
 
-  // Create menu
+  // Use node data position + SVG offset
+  let menuX = rect.left + (d.x||window.innerWidth/2);
+  let menuY = rect.top  + (d.y||window.innerHeight/2) + (d.r||30) + 10;
+
+  // If event has clientX/Y use those
+  if(event && event.clientX){ menuX = event.clientX; menuY = event.clientY + 10; }
+  if(event && event.sourceEvent){ menuX = event.sourceEvent.clientX; menuY = event.sourceEvent.clientY+10; }
+
+  // Keep on screen
+  menuX = Math.max(10, Math.min(menuX, window.innerWidth-220));
+  menuY = Math.min(menuY, window.innerHeight-200);
+
   const menu = document.createElement('div');
   menu.className = 'home-node-menu';
-  menu.style.cssText = `
-    position:fixed;
-    background:rgba(13,17,23,.9);
-    border:1.5px solid ${d.color};
-    border-top:3px solid ${d.color};
-    border-radius:0 0 12px 12px;
-    box-shadow:0 12px 40px rgba(0,0,0,.15);
-    z-index:500;
-    min-width:200px;
-    overflow:hidden;
-    animation:menuIn .2s cubic-bezier(.34,1.56,.64,1);
-  `;
+  menu.style.cssText = `position:fixed;left:${menuX}px;top:${menuY}px;
+    background:rgba(13,17,23,.97);border:1px solid ${d.color||'#00D4FF'}44;
+    border-radius:14px;padding:8px;z-index:500;min-width:200px;
+    box-shadow:0 8px 32px rgba(0,0,0,.6);backdrop-filter:blur(20px);
+    animation:slideUp .2s cubic-bezier(.34,1.56,.64,1);`;
 
-  // Title
-  const title = document.createElement('div');
-  title.style.cssText = `padding:10px 14px 8px;font-size:.65rem;font-weight:800;
-    letter-spacing:.1em;text-transform:uppercase;color:${d.color};
-    font-family:'JetBrains Mono',monospace;border-bottom:1px solid rgba(0,212,255,.06);`;
-  title.textContent = d.label;
-  menu.appendChild(title);
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = `font-family:'JetBrains Mono',monospace;font-size:.6rem;
+    font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:${d.color||'#00D4FF'};padding:4px 8px 8px;border-bottom:1px solid ${d.color||'#00D4FF'}22;
+    margin-bottom:4px;`;
+  hdr.textContent = d.label || '';
+  menu.appendChild(hdr);
 
-  // Sub items
   d.subnodes.forEach(sub=>{
     const item = document.createElement('div');
-    item.style.cssText = `padding:11px 16px;font-size:.82rem;font-weight:600;
-      cursor:pointer;color:#C9D1D9;display:flex;align-items:center;gap:8px;
-      transition:background .12s;border-bottom:1px solid #F9FAFB;`;
+    item.style.cssText = `padding:10px 12px;border-radius:8px;cursor:pointer;
+      font-size:.82rem;color:#C9D1D9;transition:background .15s;`;
     item.textContent = sub.label;
-    item.onmouseover = ()=>item.style.background='#F9FAFB';
+    item.onmouseover = ()=>item.style.background='rgba(255,255,255,.08)';
     item.onmouseout  = ()=>item.style.background='transparent';
-    item.onclick = ()=>{ menu.remove(); sub.action(); };
+    item.onclick = ()=>{ menu.remove(); if(sub.action) sub.action(); };
     menu.appendChild(item);
   });
 
-  // Close on outside click
-  setTimeout(()=>document.addEventListener('click', function closer(){
-    menu.remove(); document.removeEventListener('click',closer);
-  }), 100);
-
-  // Position near click
-  const x = Math.min(event.clientX, window.innerWidth - 220);
-  const y = Math.min(event.clientY + 10, window.innerHeight - 200);
-  menu.style.left = x+'px';
-  menu.style.top  = y+'px';
   document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click', function c(){
+    menu.remove(); document.removeEventListener('click',c);
+  }), 100);
 }
 
-// ── UNIVERSO — NÓS E LINKS ──
+// ── UNIVERSO — TODOS OS MÓDULOS ──
 const HNODES = [
-  {id:'prof',       label:'Ernandes',  sub:'UNEMAT',     r:50, color:'#00D4FF', type:'center', action:()=>openPerfil()},
-  {id:'pesquisa',   label:'Pesquisa',  sub:'102 artigos', r:40, color:'#00D4FF', type:'main',
-   subnodes:[{label:'📄 Artigos',action:()=>openProducao('artigos')},{label:'📰 Citações',action:()=>openCitacoes()},{label:'🕸️ Redes',action:()=>openRedes()},{label:'📖 Bibliometria',action:()=>openBiblio()},{label:'🎤 Palestras',action:()=>openPalestras()},{label:'💻 Plataformas',action:()=>openPlataformas()}]},
-  {id:'projetos',   label:'Projetos',  sub:'ativos',      r:38, color:'#38BDF8', type:'main',
-   subnodes:[{label:'🔬 Meus projetos',action:()=>openList('proj')},{label:'💡 Pipeline',action:()=>openPipeline()},{label:'🌿 Consultoria',action:()=>openConsultoria()},{label:'🖼️ Galeria',action:()=>openGaleria()}]},
-  {id:'orientacao', label:'Orientação',sub:'alunos',      r:38, color:'#00FF88', type:'main',
-   subnodes:[{label:'🎓 Orientandos',action:()=>openOrient()},{label:'🏛️ Bancas',action:()=>openProducao('bancas')},{label:'📋 Pareceres',action:()=>openPareceres()},{label:'🏫 Turmas',action:()=>openTurmas()}]},
-  {id:'agenda',     label:'Agenda',    sub:'prazos',      r:36, color:'#FF4B6E', type:'main',
-   subnodes:[{label:'📅 Calendário',action:()=>openAgenda()},{label:'🔔 Alertas',action:()=>openAlertScreen()},{label:'✏️ Diário',action:()=>openDiario()},{label:'📧 Gmail',action:()=>openGmail()}]},
-  {id:'ia',         label:'SOPA IA',   sub:'assistente',  r:36, color:'#A855F7', type:'main',
-   subnodes:[{label:'🤖 Chat rápido',action:()=>openChat()},{label:'💬 Tela cheia',action:()=>openAssistente()},{label:'🔍 Busca',action:()=>openBusca()}]},
-  {id:'gestao',     label:'Gestão',    sub:'acadêmica',   r:36, color:'#FF6B35', type:'main',
-   subnodes:[{label:'📊 Dashboard',action:()=>openDashboard()},{label:'👤 Perfil',action:()=>openPerfil()},{label:'📋 Burocracia',action:()=>openBurocracia()}]},
+  {id:'prof',        label:'Ernandes',    sub:'UNEMAT',        r:46, color:'#00D4FF', type:'center', action:()=>openPerfil()},
+  {id:'pesquisa',    label:'Pesquisa',    sub:'artigos',       r:34, color:'#00D4FF', type:'main',   action:()=>openProducao('artigos')},
+  {id:'projetos',    label:'Projetos',    sub:'ativos',        r:34, color:'#38BDF8', type:'main',   action:()=>openList('proj')},
+  {id:'orientacao',  label:'Orientação',  sub:'alunos',        r:34, color:'#00FF88', type:'main',   action:()=>openOrient()},
+  {id:'agenda',      label:'Agenda',      sub:'prazos',        r:34, color:'#FF4B6E', type:'main',   action:()=>openAgenda()},
+  {id:'ia',          label:'SOPA IA',     sub:'assistente',    r:34, color:'#A855F7', type:'main',   action:()=>openAssistente()},
+  {id:'gestao',      label:'Gestão',      sub:'tools',         r:34, color:'#FF6B35', type:'main',   action:()=>openDashboard()},
+  {id:'artigos',     label:'📄',  sub:'Artigos',      r:18, color:'#00D4FF', type:'sat', action:()=>openProducao('artigos')},
+  {id:'citacoes',    label:'📰',  sub:'Citações',     r:18, color:'#FACC15', type:'sat', action:()=>openCitacoes()},
+  {id:'palestras',   label:'🎤',  sub:'Palestras',    r:18, color:'#FACC15', type:'sat', action:()=>openPalestras()},
+  {id:'redes',       label:'🕸️', sub:'Redes',        r:18, color:'#00E5CC', type:'sat', action:()=>openRedes()},
+  {id:'biblio',      label:'📖',  sub:'Bibliometria', r:18, color:'#FACC15', type:'sat', action:()=>openBiblio()},
+  {id:'plataformas', label:'💻',  sub:'Plataformas',  r:18, color:'#A855F7', type:'sat', action:()=>openPlataformas()},
+  {id:'pipeline',    label:'💡',  sub:'Pipeline',     r:18, color:'#A855F7', type:'sat', action:()=>openPipeline()},
+  {id:'consultoria', label:'🌿',  sub:'Consultoria',  r:18, color:'#00E5CC', type:'sat', action:()=>openConsultoria()},
+  {id:'galeria',     label:'🖼️', sub:'Galeria',      r:18, color:'#FF6B35', type:'sat', action:()=>openGaleria()},
+  {id:'pareceres',   label:'📋',  sub:'Pareceres',    r:18, color:'#38BDF8', type:'sat', action:()=>openPareceres()},
+  {id:'turmas',      label:'🏫',  sub:'Turmas',       r:18, color:'#00FF88', type:'sat', action:()=>openTurmas()},
+  {id:'diario',      label:'✏️', sub:'Diário',       r:18, color:'#00E5CC', type:'sat', action:()=>openDiario()},
+  {id:'alertas',     label:'🔔',  sub:'Alertas',      r:18, color:'#FF4B6E', type:'sat', action:()=>openAlertScreen()},
+  {id:'dashboard',   label:'📊',  sub:'Dashboard',    r:18, color:'#38BDF8', type:'sat', action:()=>openDashboard()},
+  {id:'busca',       label:'🔍',  sub:'Busca',        r:18, color:'#E8EAED', type:'sat', action:()=>openBusca()},
+  {id:'gmail',       label:'📧',  sub:'Gmail',        r:18, color:'#FF4B6E', type:'sat', action:()=>openGmail()},
+  {id:'perfil',      label:'👤',  sub:'Perfil',       r:18, color:'#00D4FF', type:'sat', action:()=>openPerfil()},
+  {id:'burocracia',  label:'🗂️', sub:'Burocracia',   r:18, color:'#FACC15', type:'sat', action:()=>openBurocracia()},
 ];
 
 const HLINKS = [
-  {s:'prof', t:'pesquisa',   v:10, d:180},
-  {s:'prof', t:'projetos',   v:10, d:180},
-  {s:'prof', t:'orientacao', v:10, d:180},
-  {s:'prof', t:'agenda',     v:10, d:180},
-  {s:'prof', t:'ia',         v:10, d:180},
-  {s:'prof', t:'gestao',     v:10, d:180},
+  {s:'prof',       t:'pesquisa',    d:160},
+  {s:'prof',       t:'projetos',    d:160},
+  {s:'prof',       t:'orientacao',  d:160},
+  {s:'prof',       t:'agenda',      d:160},
+  {s:'prof',       t:'ia',          d:160},
+  {s:'prof',       t:'gestao',      d:160},
+  {s:'pesquisa',   t:'artigos',     d:90},
+  {s:'pesquisa',   t:'citacoes',    d:90},
+  {s:'pesquisa',   t:'palestras',   d:90},
+  {s:'pesquisa',   t:'redes',       d:90},
+  {s:'pesquisa',   t:'biblio',      d:90},
+  {s:'pesquisa',   t:'plataformas', d:90},
+  {s:'projetos',   t:'pipeline',    d:90},
+  {s:'projetos',   t:'consultoria', d:90},
+  {s:'projetos',   t:'galeria',     d:90},
+  {s:'orientacao', t:'pareceres',   d:90},
+  {s:'orientacao', t:'turmas',      d:90},
+  {s:'agenda',     t:'diario',      d:90},
+  {s:'agenda',     t:'alertas',     d:90},
+  {s:'agenda',     t:'gmail',       d:90},
+  {s:'ia',         t:'busca',       d:90},
+  {s:'gestao',     t:'dashboard',   d:90},
+  {s:'gestao',     t:'perfil',      d:90},
+  {s:'gestao',     t:'burocracia',  d:90},
 ];
 
 function buildHomeGraph(){
-  // Wait for DOM
   const svgEl = document.getElementById('home-svg');
-  if(!svgEl){ setTimeout(buildHomeGraph, 300); return; }
-  if(typeof d3 === 'undefined'){ setTimeout(buildHomeGraph, 300); return; }
+  if(!svgEl || typeof d3==='undefined'){ setTimeout(buildHomeGraph,200); return; }
 
-  const W = Math.max(svgEl.offsetWidth, window.innerWidth, 300);
-  const H = Math.max(svgEl.offsetHeight, window.innerHeight - 104, 400);
+  const W = window.innerWidth;
+  const H = window.innerHeight - 56 - 48;
+  const cx=W/2, cy=H/2;
+  const R1 = Math.min(W,H)*0.30;
+  const R2 = Math.min(W,H)*0.54;
 
-  const nodes = HNODES.map(d=>({...d}));
-  const links = HLINKS.map(d=>({source:d.s, target:d.t, value:d.v, d:d.d||150}));
+  const mains = HNODES.filter(n=>n.type==='main');
 
-  // Fix center
-  const ctr = nodes.find(n=>n.id==='prof');
-  if(ctr){ ctr.fx=W/2; ctr.fy=H/2; }
-
-  // Initial positions
-  // 6 main nodes evenly around center
-  const mainNodes = nodes.filter(n=>n.type==='main');
-  mainNodes.forEach((n,idx)=>{
-    const angle = (idx/mainNodes.length)*Math.PI*2 - Math.PI/2;
-    const dist = Math.min(W,H) * 0.35;
-    n.x = W/2 + Math.cos(angle)*dist;
-    n.y = H/2 + Math.sin(angle)*dist;
+  // Set initial positions
+  HNODES.forEach(d=>{
+    if(d.type==='center'){ d.x=cx; d.y=cy; }
+    else if(d.type==='main'){
+      const idx = mains.indexOf(d);
+      const a = (idx/mains.length)*Math.PI*2 - Math.PI/2;
+      d.x = cx+Math.cos(a)*R1; d.y = cy+Math.sin(a)*R1;
+    } else {
+      const lnk = HLINKS.find(l=>l.t===d.id);
+      const par = lnk ? HNODES.find(n=>n.id===lnk.s) : null;
+      const sibs = par ? HLINKS.filter(l=>l.s===par.id) : [];
+      const si = sibs.findIndex(l=>l.t===d.id);
+      const sc = sibs.length;
+      const pa = par ? Math.atan2(par.y-cy, par.x-cx) : 0;
+      const spread = sc>1 ? (si/(sc-1)-0.5)*1.4 : 0;
+      d.x = cx+Math.cos(pa+spread)*R2;
+      d.y = cy+Math.sin(pa+spread)*R2;
+    }
+    d.hx=d.x; d.hy=d.y; d.vx=0; d.vy=0;
   });
 
-  // Clear and setup SVG
-  const svg = d3.select(svgEl)
-    .attr('width', W).attr('height', H)
-    .style('background','transparent');
-  svg.selectAll('*').remove();
-
+  d3.select(svgEl).selectAll('*').remove();
+  const svg = d3.select(svgEl).attr('width',W).attr('height',H);
   const g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([.2,4]).on('zoom',e=>g.attr('transform',e.transform)));
 
-  // Zoom
-  svg.call(d3.zoom().scaleExtent([.2,4])
-    .on('zoom', e=>g.attr('transform',e.transform)));
+  const linkData = HLINKS.map(l=>({
+    source:HNODES.find(n=>n.id===l.s),
+    target:HNODES.find(n=>n.id===l.t)
+  })).filter(l=>l.source&&l.target);
 
-  // Simulation
-  const sim = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id(d=>d.id).distance(d=>d.d).strength(.5))
-    .force('charge', d3.forceManyBody().strength(d=>d.type==='center'?-2000:-900))
-    .force('collision', d3.forceCollide().radius(d=>d.r+25).strength(.9))
-    .force('x', d3.forceX(W/2).strength(d=>d.type==='center'?1:.02))
-    .force('y', d3.forceY(H/2).strength(d=>d.type==='center'?1:.02))
-    .alphaDecay(.01).velocityDecay(.28);
-
-  // Links
-  const linkSel = g.append('g').selectAll('line').data(links).enter()
+  const linkSel = g.append('g').selectAll('line').data(linkData).enter()
     .append('line')
-    .attr('stroke', d=>{
-      const s = nodes.find(n=>n.id===(typeof d.source==='object'?d.source.id:d.source));
-      return s ? s.color+'44' : '#333';
-    })
-    .attr('stroke-width', d=>d.type==='sat'?.8:1.5)
-    .attr('stroke-dasharray', d=>{
-      const s = nodes.find(n=>n.id===(typeof d.source==='object'?d.source.id:d.source));
-      const t = nodes.find(n=>n.id===(typeof d.target==='object'?d.target.id:d.target));
-      return (s?.type!=='center'&&t?.type!=='center') ? '3,3' : null;
-    });
+    .attr('stroke-width',d=>d.target.type==='sat'?0.8:1.5)
+    .attr('stroke',d=>d.source.color+(d.target.type==='sat'?'33':'55'));
 
-  // Node groups
-  const nodeG = g.append('g').selectAll('g').data(nodes).enter()
+  const nodeG = g.append('g').selectAll('g').data(HNODES).enter()
     .append('g').style('cursor','pointer')
     .call(d3.drag()
-      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
-      .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
-      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);if(d.type!=='center'){d.fx=null;d.fy=null;}}))
-    .on('click',(e,d)=>{
-      e.stopPropagation();
-      if(d.type==='sat'&&d.action){ d.action(); return; }
-      document.querySelectorAll('.home-node-menu').forEach(m=>m.remove());
-      showHomeNodeMenu(d,e);
-    });
+      .on('start',(e,d)=>{ d.dragging=true; })
+      .on('drag', (e,d)=>{ d.x=e.x; d.y=e.y; render(); })
+      .on('end',  (e,d)=>{ d.dragging=false; }))
+    .on('click',(e,d)=>{ e.stopPropagation(); if(d.action) d.action(); });
 
-  // Pulse ring for main nodes
-  nodeG.filter(d=>d.type!=='sat')
-    .append('circle').attr('r',d=>d.r+12)
-    .attr('fill','none').attr('stroke',d=>d.color)
-    .attr('stroke-width',.8).attr('opacity',.2)
-    .style('animation','cosmos-pulse 3s ease-out infinite')
-    .style('transform-origin','center');
+  nodeG.filter(d=>d.type!=='sat').append('circle')
+    .attr('r',d=>d.r+12).attr('fill','none').attr('stroke',d=>d.color)
+    .attr('stroke-width',1).attr('opacity',.15)
+    .style('animation','cosmos-pulse 3s ease-out infinite');
 
-  // Main circle
   nodeG.append('circle').attr('r',d=>d.r)
-    .attr('fill',d=>d.color+'18')
-    .attr('stroke',d=>d.color)
+    .attr('fill',d=>d.color+'18').attr('stroke',d=>d.color)
     .attr('stroke-width',d=>d.type==='center'?2.5:d.type==='main'?2:1.5);
 
-  // Inner fill
-  nodeG.append('circle').attr('r',d=>d.r*.5)
-    .attr('fill',d=>d.color+'22');
+  nodeG.append('circle').attr('r',d=>d.r*.5).attr('fill',d=>d.color+'22');
+  nodeG.append('circle').attr('r',d=>d.type==='center'?5:d.type==='main'?3.5:2.5).attr('fill',d=>d.color);
 
-  // Center dot
-  nodeG.append('circle')
-    .attr('r',d=>d.type==='center'?6:d.type==='main'?4:2.5)
-    .attr('fill',d=>d.color);
-
-  // Labels — emoji for sat, text for others
-  nodeG.filter(d=>d.type==='sat')
-    .append('text')
+  nodeG.filter(d=>d.type==='sat').append('text')
     .attr('text-anchor','middle').attr('dominant-baseline','central')
-    .attr('y',0).attr('font-size','14px').attr('pointer-events','none')
-    .text(d=>d.label);
+    .attr('font-size','13px').attr('y',0).attr('pointer-events','none').text(d=>d.label);
 
-  nodeG.filter(d=>d.type==='sat')
-    .append('text')
-    .attr('text-anchor','middle').attr('y',d=>d.r+11)
-    .attr('fill',d=>d.color+'99')
-    .attr('font-family',"'JetBrains Mono',monospace")
-    .attr('font-size','7px').attr('pointer-events','none')
-    .text(d=>d.sub);
+  nodeG.filter(d=>d.type==='sat').append('text')
+    .attr('text-anchor','middle').attr('fill',d=>d.color+'cc')
+    .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','7px')
+    .attr('y',d=>d.r+10).attr('pointer-events','none').text(d=>d.sub);
 
-  nodeG.filter(d=>d.type!=='sat')
-    .append('text')
+  nodeG.filter(d=>d.type!=='sat').append('text')
     .attr('text-anchor','middle').attr('dominant-baseline','central')
-    .attr('fill',d=>d.color)
-    .attr('font-family',"'JetBrains Mono',monospace")
-    .attr('font-weight','700')
-    .attr('font-size',d=>d.type==='center'?'13px':'11px')
-    .attr('y',d=>d.sub?-7:0).attr('pointer-events','none')
-    .text(d=>d.label);
+    .attr('fill',d=>d.color).attr('font-family',"'JetBrains Mono',monospace")
+    .attr('font-weight','700').attr('font-size',d=>d.type==='center'?'13px':'11px')
+    .attr('y',d=>d.sub?-7:0).attr('pointer-events','none').text(d=>d.label);
 
-  nodeG.filter(d=>d.type!=='sat'&&d.sub)
-    .append('text')
+  nodeG.filter(d=>d.type!=='sat'&&d.sub).append('text')
     .attr('text-anchor','middle').attr('dominant-baseline','central')
-    .attr('fill',d=>d.color+'88')
-    .attr('font-family',"'JetBrains Mono',monospace")
-    .attr('font-size','8px').attr('y',8).attr('pointer-events','none')
-    .text(d=>d.sub);
+    .attr('fill',d=>d.color+'88').attr('font-family',"'JetBrains Mono',monospace")
+    .attr('font-size','8px').attr('y',8).attr('pointer-events','none').text(d=>d.sub);
 
-  // Tick
-  sim.on('tick',()=>{
-    linkSel
-      .attr('x1',d=>d.source.x||W/2).attr('y1',d=>d.source.y||H/2)
-      .attr('x2',d=>d.target.x||W/2).attr('y2',d=>d.target.y||H/2);
-    nodeG.attr('transform',d=>`translate(${d.x||W/2},${d.y||H/2})`);
-  });
+  function render(){
+    linkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+           .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nodeG.attr('transform',d=>`translate(${d.x},${d.y})`);
+  }
 
-  // Gentle drift
-  setInterval(()=>{
-    if(sim.alpha()<.005){
-      nodes.forEach(n=>{
-        if(n.type!=='center'&&!n.fx){
-          n.vx+=(Math.random()-.5)*.06;
-          n.vy+=(Math.random()-.5)*.06;
-        }
-      });
-      sim.alpha(.02).restart();
-    }
-  }, 4000);
-
-  window._homeSimRef = sim;
+  let raf;
+  (function loop(){
+    HNODES.forEach(d=>{
+      if(d.dragging) return;
+      d.vx += (d.hx-d.x)*0.004 + (Math.random()-.5)*0.06;
+      d.vy += (d.hy-d.y)*0.004 + (Math.random()-.5)*0.06;
+      d.vx *= 0.95; d.vy *= 0.95;
+      d.x += d.vx; d.y += d.vy;
+    });
+    render();
+    raf = requestAnimationFrame(loop);
+  })();
+  window._stopDrift = ()=>cancelAnimationFrame(raf);
 }
 function tw(i){WEEK[i].d=!WEEK[i].d;renderHome();scheduleSync();}
 function delWeek(i){WEEK.splice(i,1);renderHome();scheduleSync();}
