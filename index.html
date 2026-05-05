@@ -2441,7 +2441,7 @@ function logout() {
     currentUser = null;
     DATA.art=[];DATA.proj=[];DATA.app=[];DATA.pessoa=[];
     DATA_AA=[];WEEK=[];
-    localStorage.removeItem('sopa_data_demo');
+    localStorage.removeItem('sopa_data_offline_bak');
     show('s-cfg');
     document.getElementById('topbar').style.display = 'none';
     document.getElementById('botNav').style.display = 'none';
@@ -2459,7 +2459,7 @@ async function clearAllMyData() {
       toast('Dados apagados ✓');
     } catch(e) { toast('Erro: '+e.message); }
   } else {
-    localStorage.removeItem('sopa_data_demo');
+    localStorage.removeItem('sopa_data_offline_bak');
     toast('Dados apagados ✓');
   }
   goHome();
@@ -2588,7 +2588,7 @@ function scheduleSync() {
   if (!FIREBASE_MODE || !currentUser) {
     // Demo mode: save to localStorage
     const toSave = { DATA, DATA_AA, WEEK, PERFIL };
-    localStorage.setItem('sopa_data_demo', JSON.stringify(toSave));
+    localStorage.setItem('sopa_data_offline_bak', JSON.stringify(toSave));
     return;
   }
   setSyncStatus('syncing');
