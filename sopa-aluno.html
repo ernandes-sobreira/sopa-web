@@ -541,7 +541,9 @@ function loginGoogle(){
 function loginLocal(){
   // Local mode only works with invite code in URL
   const params = new URLSearchParams(window.location.search);
-  const inviteCode = params.get('invite') || params.get('i') || '';
+  const inviteCode = params.get('invite') || params.get('i') || localStorage.getItem('sopa_invite_code') || '';
+  // Always persist inviteCode so future saves can sync
+  if(inviteCode) localStorage.setItem('sopa_invite_code', inviteCode);
   if(!inviteCode && !localStorage.getItem('sopa_aluno_autorizado_local')){
     const blocked = document.getElementById('s-blocked');
     if(blocked) blocked.style.display='flex';
@@ -622,12 +624,14 @@ async function saveFirestore(){
     // Also write to convites if we have the inviteCode
     const savedCode = localStorage.getItem('sopa_invite_code');
     if(savedCode){
-      await db.collection('convites').doc(savedCode).update({
+      const conviteData = {
         aluno_progress: progressData,
         aluno_uid: currentUser.uid,
-      }).catch(()=>
-        db.collection('convites').doc(savedCode).set({aluno_progress: progressData}, {merge:true})
-      );
+        aluno_email: currentUser.email,
+        last_sync: new Date().toISOString()
+      };
+      await db.collection('convites').doc(savedCode).update(conviteData)
+        .catch(()=> db.collection('convites').doc(savedCode).set(conviteData, {merge:true}));
     }
   }catch(e){ console.warn('Firestore save:', e); }
 }
@@ -1569,6 +1573,8 @@ async function checkAccess(user){
     if(FIREBASE_MODE && db){
       try{
         const snap = await db.collection('convites').doc(inviteCode).get();
+        // Always save invite code for future syncs
+          localStorage.setItem('sopa_invite_code', inviteCode);
         if(snap.exists && !snap.data().usado){
           // Marcar como usado e salvar vínculo
           await db.collection('convites').doc(inviteCode).update({
@@ -1577,8 +1583,7 @@ async function checkAccess(user){
             usado_em: new Date().toISOString(),
             aluno_email: user.email
           });
-          // Save invite code for future syncs
-          localStorage.setItem('sopa_invite_code', inviteCode);
+          // Save invite code for future syncs (already set above)
           // Salvar orientador automaticamente
           if(snap.data().orientador_email){
             STATE.perfil.orientador_email = snap.data().orientador_email;
