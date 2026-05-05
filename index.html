@@ -2645,8 +2645,8 @@ async function saveToFirestore() {
 
     // Sync each orientando to shared_orient collection
     (ORIENTANDOS||[]).forEach(o=>{
-      if(!o.inviteCode && !o.aluno_uid) return;
-      const docId = o.inviteCode || o.aluno_uid;
+      if(!o.inviteCode) return; // Only sync orientandos with invite codes
+      const docId = o.inviteCode;
       db.collection('shared_orient').doc(docId).set({
         metas: o.metas||[],
         reunioes: o.reunioes||[],
@@ -7413,33 +7413,48 @@ async function gerarConviteAluno(oid){
   const o = ORIENTANDOS.find(x=>x.id===oid);
   if(!o){ toast('Orientando não encontrado'); return; }
 
-  // Generate code
+  // Use existing code or generate new one
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for(let i=0;i<8;i++) code += chars[Math.floor(Math.random()*chars.length)];
-
-  // Base URL — GitHub Pages
+  if(!o.inviteCode){
+    let code = '';
+    for(let i=0;i<8;i++) code += chars[Math.floor(Math.random()*chars.length)];
+    o.inviteCode = code;
+    saveData(); // Save inviteCode to orientando
+  }
+  const code = o.inviteCode;
   const baseUrl = 'https://ernandes-sobreira.github.io/sopa-web/sopa-aluno.html';
-  const link = `${baseUrl}?invite=${code}`;
+  const link = baseUrl + '?invite=' + code;
 
-  // Save to Firebase if available
+  // Save to Firebase
   if(FIREBASE_MODE && typeof db !== 'undefined'){
     try{
+      const profEmail = currentUser?.email || 'ernandes.sobreira@unemat.br';
+      const profNome = PERFIL?.nome || 'Prof. Dr. Ernandes Sobreira Oliveira Junior';
+      // Save convite doc
       await db.collection('convites').doc(code).set({
-        code,
-        aluno_id: oid,
-        aluno_nome: o.nome,
-        orientador_email: 'ernandes.sobreira@unemat.br',
-        orientador_nome: 'Prof. Dr. Ernandes Sobreira Oliveira Junior',
+        code, aluno_id: oid, aluno_nome: o.nome,
+        orientador_email: profEmail,
+        orientador_nome: profNome,
         criado_em: new Date().toISOString(),
-        expira_em: new Date(Date.now()+30*24*60*60*1000).toISOString(),
-        usado: false,
-        usado_por: null
-      });
-    }catch(e){ console.warn('Convite Firebase:', e); }
+        usado: false, usado_por: null
+      }, {merge:true});
+      // Create shared_orient doc immediately with professor data
+      await db.collection('shared_orient').doc(code).set({
+        metas: o.metas||[],
+        reunioes: o.reunioes||[],
+        docs: o.docs||[],
+        info: {
+          nome: o.nome, nivel: o.nivel, programa: o.programa,
+          tema: o.tema, orientador_nome: profNome,
+          orientador_email: profEmail
+        },
+        prof_updated: new Date().toISOString(),
+        inviteCode: code
+      }, {merge:true});
+      toast('✅ Link gerado e salvo!');
+    }catch(e){ console.warn('Convite Firebase:', e); toast('Link gerado (offline)'); }
   }
 
-  // Show invite modal with share options
   showInviteModal(o.nome.split(' ')[0], link);
 }
 

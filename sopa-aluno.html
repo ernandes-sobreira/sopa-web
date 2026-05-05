@@ -587,11 +587,12 @@ async function onLogin(user){
           const newR = sd.reunioes.filter(r=>!existingKeys.has(r.data+'|'+r.titulo));
           STATE.reunioes = [...(STATE.reunioes||[]), ...newR];
         }
-        // Load orientador info if not set
-        if(sd.info && !STATE.perfil.orientador_email){
-          STATE.perfil.orientador_nome = sd.info.orientador_nome || 'Prof. Dr. Ernandes Sobreira';
-          STATE.perfil.orientador_email = sd.info.orientador_email || '';
+        // Always update orientador info from shared doc
+        if(sd.info){
+          STATE.perfil.orientador_nome = sd.info.orientador_nome || STATE.perfil.orientador_nome || 'Prof. Dr. Ernandes Sobreira';
+          if(sd.info.orientador_email) STATE.perfil.orientador_email = sd.info.orientador_email;
         }
+        autoSave();
       }
     }catch(e){ console.warn('Load shared_orient:', e); }
   }catch(e){}
