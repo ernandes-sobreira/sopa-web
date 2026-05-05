@@ -2603,6 +2603,31 @@ async function saveToFirestore() {
       CONSULTORIA: DATA.consultoria||{clientes:[],projetos:[]},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+
+    // Sync each orientando's metas to vinculos so aluno can see
+    (ORIENTANDOS||[]).forEach(o=>{
+      if(!o.nome) return;
+      // Find vinculo by name match or aluno_uid
+      const query = o.aluno_uid
+        ? db.collection('vinculos').doc(o.aluno_uid)
+        : null;
+      if(query){
+        query.update({
+          metas_professor: o.metas||[],
+          reunioes_professor: o.reunioes||[],
+          prof_updated: new Date().toISOString()
+        }).catch(()=>{});
+      }
+      // Also try by inviteCode
+      if(o.inviteCode){
+        db.collection('convites').doc(o.inviteCode).update({
+          metas_professor: o.metas||[],
+          reunioes_professor: o.reunioes||[],
+          prof_updated: new Date().toISOString()
+        }).catch(()=>{});
+      }
+    });
+
     setSyncStatus('ok');
   } catch(e) {
     setSyncStatus('offline');

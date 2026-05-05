@@ -565,6 +565,31 @@ async function onLogin(user){
     const snap = await db.collection('alunos').doc(user.uid).get();
     if(snap.exists) Object.assign(STATE, snap.data());
     if(!STATE.perfil.nome && user.displayName) STATE.perfil.nome = user.displayName;
+
+    // Load professor metas from convites
+    const savedCode = localStorage.getItem('sopa_invite_code');
+    if(savedCode){
+      try{
+        const conviteSnap = await db.collection('convites').doc(savedCode).get();
+        if(conviteSnap.exists){
+          const cd = conviteSnap.data();
+          // Merge professor metas into STATE
+          if(cd.metas_professor && cd.metas_professor.length){
+            // Keep aluno done-status for matching metas
+            const profMetas = cd.metas_professor.map(pm=>{
+              const existing = (STATE.metas||[]).find(m=>m.nome===pm.nome||m.id===pm.id);
+              return existing ? {...pm, done:existing.done} : pm;
+            });
+            STATE.metas = profMetas;
+          }
+          if(cd.reunioes_professor && cd.reunioes_professor.length){
+            STATE.reunioes = [...(STATE.reunioes||[]), ...cd.reunioes_professor.filter(r=>
+              !(STATE.reunioes||[]).some(er=>er.data===r.data&&er.titulo===r.titulo)
+            )];
+          }
+        }
+      }catch(e){ console.warn('Load prof metas:', e); }
+    }
   }catch(e){}
 
   // ── CHECK ACCESS ──
