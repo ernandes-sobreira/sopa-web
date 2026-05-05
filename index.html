@@ -1895,6 +1895,48 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 }
 .chat-suggestion:hover{background:rgba(0,212,255,.18);}
 
+
+/* ══ BUSCA GLOBAL ══ */
+.busca-header{
+  background:rgba(5,8,16,.95);backdrop-filter:blur(20px);
+  padding:14px 16px 10px;position:sticky;top:56px;z-index:40;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.busca-input-wrap{
+  display:flex;gap:8px;align-items:center;
+  background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);
+  border-radius:14px;padding:0 14px;transition:border-color .15s;
+}
+.busca-input-wrap:focus-within{border-color:rgba(0,212,255,.5);}
+.busca-input{
+  flex:1;padding:12px 0;background:transparent;border:none;
+  font-family:var(--ff);font-size:.92rem;color:#E8EAED;outline:none;
+}
+.busca-input::placeholder{color:#4B5563;}
+.busca-result-group{margin-bottom:16px;}
+.busca-group-title{
+  font-family:var(--fm);font-size:.58rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.25);
+  padding:0 2px;margin-bottom:7px;
+  display:flex;align-items:center;gap:8px;
+}
+.busca-group-title::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.06);}
+.busca-item{
+  background:rgba(13,17,23,.92);border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;padding:11px 13px;margin-bottom:5px;
+  cursor:pointer;transition:all .15s;display:flex;gap:10px;align-items:flex-start;
+}
+.busca-item:hover{border-color:rgba(0,212,255,.3);transform:translateX(3px);}
+.busca-item-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+.busca-item-body{flex:1;min-width:0;}
+.busca-item-title{font-size:.82rem;font-weight:700;color:#E8EAED;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+.busca-item-sub{font-size:.65rem;color:#6B7280;}
+.busca-item-badge{font-family:var(--fm);font-size:.58rem;font-weight:700;
+  padding:2px 7px;border-radius:4px;flex-shrink:0;}
+.busca-highlight{color:#00D4FF;background:rgba(0,212,255,.12);
+  border-radius:2px;padding:0 2px;}
+
 </style>
 </head>
 <body>
@@ -2133,6 +2175,9 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
   </div>
 </div>
 
+<!-- ══ TELA: BUSCA ══ -->
+<div id="s-busca" class="sc"><div id="busca-content"></div></div>
+
 <!-- ══ TELA: BUROCRACIA ══ -->
 <div id="s-burocracia" class="sc">
   <div id="burocracia-content"></div>
@@ -2191,6 +2236,7 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 <!-- BOTTOM NAV (shown when logged in) -->
 <nav class="bnn" id="botNav" style="display:none">
   <button class="bn" id="nav-home" onclick="goHome()">🌐</button>
+  <button class="bn" id="nav-busca" onclick="openBusca()">🔍</button>
   <button class="bn" id="nav-prod" onclick="openProducao()">📚</button>
   <button class="bn" id="nav-proj" onclick="openList('proj')">🔬</button>
   <button class="bn" id="nav-orient" onclick="openOrient()">🎓</button>
@@ -2830,40 +2876,56 @@ function buildHomeGraph(){
   };
 
   const HNODES = [
-    {id:'prof',    label:userName,   sub:'UNEMAT',            r:62, color:CORES.center,    type:'center',
+    // ── CENTER ──
+    {id:'prof', label:userName, sub:'UNEMAT', r:52, color:'#00D4FF', type:'center',
      action:()=>openPerfil(),
      subnodes:[
-       {label:'👤 Meu Perfil',     action:()=>openPerfil()},
-       {label:'↗ Perfil público',  action:()=>{ window.open('perfil.html','_blank'); }},
-       {label:'📷 Trocar foto',    action:()=>openPerfil()},
+       {label:'👤 Meu Perfil',    action:()=>openPerfil()},
+       {label:'↗ Perfil público', action:()=>{ window.open('perfil.html','_blank'); }},
      ]},
-    {id:'pesquisa',label:'Pesquisa', sub:`${artTotal} artigos`,r:52, color:CORES.pesquisa,  type:'main',
-     subnodes:[{label:'📄 Artigos',action:()=>openProducao('artigos')},{label:'🔬 Projetos',action:()=>openList('proj')},{label:'📊 Bibliometria',action:()=>openBiblio()},{label:'🕸️ Redes',action:()=>openRedes()}]},
-    {id:'ensino',  label:'Ensino',   sub:`${bancTotal} bancas`,r:46, color:CORES.ensino,    type:'main',
-     subnodes:[{label:'🎓 Orientações',action:()=>openProducao('orientacoes')},{label:'🏛️ Bancas',action:()=>openProducao('bancas')},{label:'🎓 Orientandos',action:()=>openOrient()}]},
-    {id:'extensao',label:'Extensão', sub:'projetos',           r:42, color:CORES.extensao,  type:'main',
-     subnodes:[{label:'🎪 Eventos',action:()=>openProducao('org_ev')},{label:'🎤 Apresentações',action:()=>openProducao('apresent')}]},
-    {id:'tecnica', label:'Técnica',  sub:'183 itens',          r:40, color:CORES.tecnica,   type:'main',
-     subnodes:[{label:'💻 Software',action:()=>openProducao('software')},{label:'⚙️ Prod. Técnica',action:()=>openProducao('trab_tec')}]},
-    {id:'redes',   label:'Redes',    sub:'coautoria',          r:30, color:CORES.redes,     type:'sat', action:()=>openRedes()},
-    {id:'biblio',  label:'Biblio',   sub:'Qualis·stats',       r:28, color:CORES.biblio,    type:'sat', action:()=>openBiblio()},
-    {id:'agenda',  label:'Agenda',   sub:'calendário',         r:26, color:CORES.agenda,    type:'sat', action:()=>openAgenda()},
-    {id:'projetos',label:'Projetos', sub:'27 projetos',        r:32, color:CORES.projetos,  type:'sat', action:()=>openList('proj')},
-    {id:'burocracia',label:'Burocracia',sub:'atas·diárias',    r:26, color:CORES.burocracia,type:'sat', action:()=>openBurocracia()},
-    {id:'alertas',     label:'Alertas',     sub:'prazos',         r:24, color:CORES.alertas, type:'sat', action:()=>openAlertScreen()},
-    {id:'diario',      label:'Diário',      sub:'notas·campo',    r:26, color:'#00E5CC',    type:'sat', action:()=>openDiario()},
-    {id:'pareceres',   label:'Pareceres',   sub:'revisões',       r:28, color:'#38BDF8',    type:'sat', action:()=>openPareceres()},
-    {id:'palestras',   label:'Palestras',   sub:'eventos',        r:28, color:'#FACC15',    type:'sat', action:()=>openPalestras()},
-    {id:'citacoes',    label:'Citações',    sub:'Scholar·h-index',r:30, color:'#FACC15',    type:'sat', action:()=>openCitacoes()},
-    {id:'turmas',      label:'Turmas',      sub:'disciplinas',    r:26, color:'#00FF88',    type:'sat', action:()=>openTurmas()},
-    {id:'pipeline',    label:'Pipeline',    sub:'editais·ideias',  r:28, color:'#A855F7',    type:'sat', action:()=>openPipeline()},
-    {id:'assistente',  label:'SOPA IA',     sub:'assistente',     r:36, color:'#00D4FF',    type:'main', action:()=>openAssistente(),
-     subnodes:[{label:'🤖 SOPA IA', action:()=>openAssistente()},{label:'💬 Chat rápido', action:()=>openChat()}]},
-    {id:'consultoria', label:'Consultoria', sub:'Japuira',          r:30, color:'#00E5CC',    type:'sat', action:()=>openConsultoria()},
-    {id:'gmail',       label:'Gmail',       sub:'e-mails',        r:26, color:'#FF4B6E',    type:'sat', action:()=>openGmail()},
-    {id:'dashboard',   label:'Dashboard',   sub:'produtividade',   r:34, color:'#00D4FF',    type:'main', action:()=>openDashboard(),
-     subnodes:[{label:'📊 Dashboard', action:()=>openDashboard()},{label:'📈 Produção anual', action:()=>openDashboard()}]},
-    {id:'plataformas',  label:'Plataformas', sub:'74 softwares',    r:32, color:'#A855F7',      type:'sat', action:()=>openPlataformas()},
+
+    // ── 6 MAIN NODES ──
+    {id:'pesquisa',  label:'Pesquisa',   sub:`${artTotal} artigos`,  r:44, color:'#00D4FF',  type:'main',
+     subnodes:[
+       {label:'📄 Artigos',         action:()=>openProducao('artigos')},
+       {label:'🔬 Projetos',        action:()=>openList('proj')},
+       {label:'📊 Dashboard',       action:()=>openDashboard()},
+       {label:'🕸️ Redes',           action:()=>openRedes()},
+       {label:'📰 Citações',        action:()=>openCitacoes()},
+       {label:'📊 Bibliometria',    action:()=>openBiblio()},
+     ]},
+    {id:'orientacao',label:'Orientação', sub:`${bancTotal} bancas`,  r:38, color:'#00FF88',    type:'main',
+     subnodes:[
+       {label:'🎓 Orientandos',     action:()=>openOrient()},
+       {label:'🏛️ Bancas',          action:()=>openProducao('bancas')},
+       {label:'📋 Pareceres',       action:()=>openPareceres()},
+       {label:'🏫 Turmas',          action:()=>openTurmas()},
+     ]},
+    {id:'projetos',  label:'Projetos',   sub:'ativos',               r:40, color:'#38BDF8',       type:'main',
+     subnodes:[
+       {label:'🔬 Meus projetos',   action:()=>openList('proj')},
+       {label:'💡 Pipeline',        action:()=>openPipeline()},
+       {label:'🌿 Consultoria',     action:()=>openConsultoria()},
+     ]},
+    {id:'producao',  label:'Produção',   sub:'acadêmica',            r:36, color:'#A855F7',       type:'main',
+     subnodes:[
+       {label:'📄 Toda produção',   action:()=>openProducao()},
+       {label:'🎤 Palestras',       action:()=>openPalestras()},
+       {label:'💻 Plataformas',     action:()=>openPlataformas()},
+     ]},
+    {id:'agenda',    label:'Agenda',     sub:'alertas·prazos',       r:34, color:'#FF4B6E',       type:'main',
+     subnodes:[
+       {label:'📅 Calendário',      action:()=>openAgenda()},
+       {label:'🔔 Alertas',         action:()=>openAlertScreen()},
+       {label:'✏️ Diário',          action:()=>openDiario()},
+       {label:'📧 Gmail',           action:()=>openGmail()},
+     ]},
+    {id:'ia',        label:'SOPA IA',    sub:'assistente',           r:38, color:'#00D4FF',       type:'main',
+     subnodes:[
+       {label:'🤖 Chat rápido',     action:()=>openChat()},
+       {label:'💬 Tela cheia',      action:()=>openAssistente()},
+       {label:'🔍 Busca',           action:()=>openBusca()},
+     ]},
   ];
 
   // ── CHAOS: random initial positions far from center ──
@@ -2891,22 +2953,17 @@ function buildHomeGraph(){
 
   // ── LINKS — irregular distances ──
   const HLINKS = [
-    {s:'prof',t:'pesquisa',  v:102, d: RAND(160,240)},
-    {s:'prof',t:'ensino',    v:85,  d: RAND(140,220)},
-    {s:'prof',t:'extensao',  v:18,  d: RAND(130,200)},
-    {s:'prof',t:'tecnica',   v:34,  d: RAND(150,210)},
-    {s:'prof',t:'redes',     v:20,  d: RAND(120,180)},
-    {s:'prof',t:'biblio',    v:15,  d: RAND(110,170)},
-    {s:'prof',t:'agenda',    v:10,  d: RAND(100,160)},
-    {s:'prof',t:'projetos',  v:27,  d: RAND(130,190)},
-    {s:'prof',t:'burocracia',v:8,   d: RAND(105,165)},
-    {s:'prof',t:'alertas',   v:5,   d: RAND(95, 150)},
-    // Cross-links for chaos
-    {s:'pesquisa',t:'projetos', v:15, d: RAND(80,140)},
-    {s:'ensino',  t:'redes',    v:10, d: RAND(90,150)},
-    {s:'pesquisa',t:'biblio',   v:12, d: RAND(70,120)},
-    {s:'extensao',t:'agenda',   v:8,  d: RAND(80,130)},
-    {s:'tecnica', t:'projetos', v:10, d: RAND(75,125)},
+    {s:'prof',      t:'pesquisa',   v:102, d:RAND(160,220)},
+    {s:'prof',      t:'orientacao', v:85,  d:RAND(150,210)},
+    {s:'prof',      t:'projetos',   v:27,  d:RAND(160,220)},
+    {s:'prof',      t:'producao',   v:50,  d:RAND(150,200)},
+    {s:'prof',      t:'agenda',     v:10,  d:RAND(140,190)},
+    {s:'prof',      t:'ia',         v:25,  d:RAND(155,215)},
+    // Cross links
+    {s:'pesquisa',  t:'projetos',   v:15,  d:RAND(80,130)},
+    {s:'pesquisa',  t:'producao',   v:20,  d:RAND(70,120)},
+    {s:'orientacao',t:'projetos',   v:10,  d:RAND(80,120)},
+    {s:'agenda',    t:'projetos',   v:8,   d:RAND(75,115)},
   ];
 
   const nodes = HNODES.map(d=>({...d}));
@@ -2950,27 +3007,25 @@ function buildHomeGraph(){
       }))
     .force('charge', d3.forceManyBody()
       .strength(d => {
-        if(d.type==='center') return -1400;
-        if(d.type==='main')   return RAND(-500,-350);
-        return RAND(-200,-120); // varied repulsion for chaos
+        if(d.type==='center') return -2000;
+        if(d.type==='main')   return RAND(-900,-600);
+        return RAND(-400,-250);
       })
-      .distanceMax(350)
-      .distanceMin(30))
+      .distanceMax(500)
+      .distanceMin(40))
     .force('collision', d3.forceCollide()
-      .radius(d => d.r + RAND(8,22)) // varied collision = gaps of different sizes
-      .strength(.6))  // lower strength = more overlap/chaos
-    // Weak centering — nodes can drift far
+      .radius(d => d.r + RAND(18,32))
+      .strength(.92))
     .force('x', d3.forceX(d => {
       if(d.type==='center') return W/2;
-      // Bias toward random quadrants
-      return W/2 + RAND(-W*.25, W*.25);
-    }).strength(d => d.type==='center' ? 1 : .015))
+      return W/2 + RAND(-W*.3, W*.3);
+    }).strength(d => d.type==='center' ? 1 : .02))
     .force('y', d3.forceY(d => {
       if(d.type==='center') return H/2;
-      return H/2 + RAND(-H*.25, H*.25);
-    }).strength(d => d.type==='center' ? 1 : .015))
-    .alphaDecay(.012)       // slower decay = longer chaotic motion
-    .velocityDecay(.25);    // low damping = nodes keep drifting
+      return H/2 + RAND(-H*.3, H*.3);
+    }).strength(d => d.type==='center' ? 1 : .02))
+    .alphaDecay(.010)
+    .velocityDecay(.28);
 
   // ── LINKS ──
   const linkSel = g.append('g').selectAll('path').data(links).enter()
@@ -11979,6 +12034,214 @@ function dismissInstallBanner(){
   if(banner) banner.style.display = 'none';
   localStorage.setItem('pwa_dismissed', '1');
 }
+
+
+// ═══ BUSCA GLOBAL ═══
+
+// ══ BUSCA GLOBAL ══
+let _buscaQuery = '';
+let _buscaTimer = null;
+
+function openBusca(){
+  setCC('#E8EAED');
+  show('s-busca');
+  renderBusca();
+  setTimeout(()=>document.getElementById('busca-input-el')?.focus(), 200);
+}
+
+function renderBusca(){
+  const el = document.getElementById('busca-content');
+  if(!el) return;
+
+  el.innerHTML = `
+    <div class="busca-header">
+      <div style="font-size:1.1rem;font-weight:800;color:#E8EAED;margin-bottom:10px;">🔍 Busca</div>
+      <div class="busca-input-wrap">
+        <span style="font-size:1.1rem;opacity:.4;">🔍</span>
+        <input class="busca-input" id="busca-input-el"
+          placeholder="Buscar em tudo — artigos, projetos, notas..."
+          value="${_buscaQuery}"
+          oninput="_buscaQuery=this.value;clearTimeout(_buscaTimer);_buscaTimer=setTimeout(()=>renderBuscaResults(_buscaQuery),200);"
+          autocomplete="off" autocorrect="off" spellcheck="false">
+        ${_buscaQuery?`<button onclick="_buscaQuery='';renderBusca();"
+          style="background:none;border:none;color:#6B7280;cursor:pointer;font-size:.8rem;padding:4px;">✕</button>`:''}
+      </div>
+    </div>
+    <div id="busca-results" style="padding:12px 12px 90px;">
+      ${_buscaQuery ? '' : renderBuscaRecentes()}
+    </div>`;
+
+  if(_buscaQuery) renderBuscaResults(_buscaQuery);
+}
+
+function renderBuscaRecentes(){
+  // Show module shortcuts when no query
+  const modules = [
+    {icon:'📄',label:'Artigos',       action:"openProducao('artigos')"},
+    {icon:'🔬',label:'Projetos',      action:"openList('proj')"},
+    {icon:'🎓',label:'Orientandos',   action:"openOrient()"},
+    {icon:'📨',label:'Pareceres',     action:"openPareceres()"},
+    {icon:'💡',label:'Pipeline',      action:"openPipeline()"},
+    {icon:'✏️',label:'Diário',        action:"openDiario()"},
+    {icon:'🎤',label:'Palestras',     action:"openPalestras()"},
+    {icon:'💻',label:'Plataformas',   action:"openPlataformas()"},
+    {icon:'🌿',label:'Consultoria',   action:"openConsultoria()"},
+    {icon:'📊',label:'Dashboard',     action:"openDashboard()"},
+    {icon:'🏫',label:'Turmas',        action:"openTurmas()"},
+    {icon:'📰',label:'Citações',      action:"openCitacoes()"},
+  ];
+
+  return `
+    <div style="font-family:var(--fm);font-size:.6rem;font-weight:700;
+      letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.2);
+      margin-bottom:12px;">Acesso rápido</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:20px;">
+      ${modules.map(m=>`
+        <div onclick="${m.action}"
+          style="background:rgba(13,17,23,.9);border:1px solid rgba(255,255,255,.07);
+          border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s;"
+          onmouseover="this.style.borderColor='rgba(0,212,255,.3)'"
+          onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+          <div style="font-size:1.2rem;margin-bottom:4px;">${m.icon}</div>
+          <div style="font-size:.65rem;font-weight:700;color:#C9D1D9;">${m.label}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderBuscaResults(q){
+  const el = document.getElementById('busca-results');
+  if(!el || !q?.trim()) return;
+  const ql = q.toLowerCase().trim();
+
+  const results = [];
+
+  // ── ARTIGOS ──
+  const artigos = [...(XML_DATA?.artigos||[]),...(DATA.art||[])];
+  artigos.filter(a=>(a[0]||a.name||'').toLowerCase().includes(ql)).slice(0,5).forEach(a=>{
+    results.push({
+      group:'📄 Artigos', icon:'📄',
+      title:a[0]||a.name||'', sub:`${a[1]||''} · ${a[2]||''}`,
+      color:'#1D4ED8', action:"openProducao('artigos')"
+    });
+  });
+
+  // ── PROJETOS ──
+  (DATA.proj||[]).filter(p=>(p.name||'').toLowerCase().includes(ql)||
+    (p.desc||p.notes||'').toLowerCase().includes(ql)).slice(0,4).forEach(p=>{
+    results.push({
+      group:'🔬 Projetos', icon:'🔬',
+      title:p.name||'', sub:p.status||'',
+      color:'#00D4FF', action:`openProjDetail(${p.id})`
+    });
+  });
+
+  // ── ORIENTANDOS ──
+  (ORIENTANDOS||[]).filter(o=>(o.nome||'').toLowerCase().includes(ql)||
+    (o.tema||'').toLowerCase().includes(ql)).forEach(o=>{
+    results.push({
+      group:'🎓 Orientandos', icon:'🎓',
+      title:o.nome||'', sub:`${o.nivel||''} · ${o.programa||''}`,
+      color:'#00FF88', action:'openOrient()'
+    });
+  });
+
+  // ── PARECERES ──
+  (DATA.pareceres||[]).filter(p=>(p.titulo||'').toLowerCase().includes(ql)||
+    (p.revista||'').toLowerCase().includes(ql)).slice(0,3).forEach(p=>{
+    results.push({
+      group:'📨 Pareceres', icon:'📨',
+      title:p.titulo||'', sub:`${p.revista||''} · ${p.status||''}`,
+      color:'#38BDF8', action:'openPareceres()'
+    });
+  });
+
+  // ── DIÁRIO ──
+  (DATA.diario||[]).filter(e=>(e.texto||'').toLowerCase().includes(ql)).slice(0,4).forEach(e=>{
+    results.push({
+      group:'✏️ Diário', icon:e.tipo==='campo'?'🌿':'✏️',
+      title:(e.texto||'').slice(0,60)+(e.texto?.length>60?'...':''),
+      sub:e.data||'',
+      color:'#00E5CC', action:'openDiario()'
+    });
+  });
+
+  // ── PLATAFORMAS ──
+  (DATA.app||[]).filter(p=>(p.name||'').toLowerCase().includes(ql)||
+    (p.desc||p.notes||'').toLowerCase().includes(ql)).slice(0,4).forEach(p=>{
+    results.push({
+      group:'💻 Plataformas', icon:'💻',
+      title:p.name||'', sub:`${p.cat||''} · ${p.status||''}`,
+      color:'#A855F7', action:`openPlatDetail('${p.id}')`
+    });
+  });
+
+  // ── PIPELINE ──
+  (DATA.pipeline||[]).filter(p=>(p.titulo||'').toLowerCase().includes(ql)||
+    (p.agencia||'').toLowerCase().includes(ql)).slice(0,3).forEach(p=>{
+    results.push({
+      group:'💡 Pipeline', icon:'💡',
+      title:p.titulo||'', sub:`${p.agencia||''} · ${p.status||''}`,
+      color:'#A855F7', action:'openPipeline()'
+    });
+  });
+
+  // ── TURMAS ──
+  (DATA.turmas||[]).filter(t=>(t.nome||'').toLowerCase().includes(ql)||
+    (t.ementa||'').toLowerCase().includes(ql)).slice(0,3).forEach(t=>{
+    results.push({
+      group:'🏫 Turmas', icon:'🏫',
+      title:t.nome||'', sub:`${t.curso||''} · ${t.ano||''}`,
+      color:'#00FF88', action:'openTurmas()'
+    });
+  });
+
+  // ── CONSULTORIA ──
+  (DATA.consultoria?.projetos||[]).filter(p=>(p.titulo||'').toLowerCase().includes(ql)).slice(0,3).forEach(p=>{
+    results.push({
+      group:'🌿 Consultoria', icon:'🌿',
+      title:p.titulo||'', sub:p.status||'',
+      color:'#00E5CC', action:'openConsultoria()'
+    });
+  });
+
+  if(!results.length){
+    el.innerHTML = `
+      <div style="text-align:center;padding:50px 20px;">
+        <div style="font-size:2.5rem;opacity:.2;margin-bottom:10px;">🔍</div>
+        <div style="font-size:.84rem;color:#6B7280;">Nenhum resultado para "<strong style="color:#E8EAED;">${q}</strong>"</div>
+      </div>`;
+    return;
+  }
+
+  // Group results
+  const groups = {};
+  results.forEach(r=>{ if(!groups[r.group]) groups[r.group]=[]; groups[r.group].push(r); });
+
+  function hl(text){
+    const idx = text.toLowerCase().indexOf(ql);
+    if(idx<0) return text;
+    return text.slice(0,idx)+`<span class="busca-highlight">${text.slice(idx,idx+ql.length)}</span>`+text.slice(idx+ql.length);
+  }
+
+  el.innerHTML = `
+    <div style="font-family:var(--fm);font-size:.6rem;color:rgba(255,255,255,.2);margin-bottom:12px;">
+      ${results.length} resultado(s) para "${q}"
+    </div>
+    ${Object.entries(groups).map(([grp,items])=>`
+      <div class="busca-result-group">
+        <div class="busca-group-title">${grp} <span style="opacity:.5;">(${items.length})</span></div>
+        ${items.map(item=>`
+          <div class="busca-item" onclick="${item.action};show(document.querySelector('.sc.on')?.id||'sh')">
+            <div class="busca-item-icon">${item.icon}</div>
+            <div class="busca-item-body">
+              <div class="busca-item-title">${hl(item.title)}</div>
+              <div class="busca-item-sub">${item.sub}</div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}`;
+}
+
+
 </script>
 </body>
 </html
