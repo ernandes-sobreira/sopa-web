@@ -6718,8 +6718,8 @@ function openOrient(){
   setCC('#0D1117');
   show('s-orient');
   renderOrient();
-  // Auto-sync aluno data from Firebase
-  syncAlunoProgress();
+  // Sync silently in background
+  setTimeout(()=>syncAlunoProgress(), 2000);
 }
 
 function manualSyncAlunos(){
@@ -6781,7 +6781,7 @@ function syncAlunoProgress(){
       } else {
         toast('ℹ️ Nenhuma atualização encontrada');
       }
-    }).catch(e=>{ console.warn('Sync vinculos:', e); toast('⚠️ Erro na sincronização'); });
+    }).catch(e=>{ console.warn('Sync vinculos:', e); console.warn('Sync error'); });
 
   setTimeout(()=>{ if(updated){ saveData(); renderOrient(); } }, 2000);
 }
