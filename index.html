@@ -2430,21 +2430,13 @@ function loginGoogle() {
 }
 
 function logout() {
+  localStorage.removeItem('sopa_data_offline_bak');
   if (auth) {
     auth.signOut().then(() => {
-      // Clear local state
-      DATA.art=[];DATA.proj=[];DATA.app=[];DATA.pessoa=[];
-      DATA_AA=[];WEEK=[];
-      PERFIL={nome:'',avatar:'m1',photo:null,curso:'PROFÁGUA — Recursos Hídricos',inst:'UNEMAT — Campus Cáceres, Jane Vanini',lattes:'http://lattes.cnpq.br/',orcid:'',bio:'',anim:true};
-    });
+      window.location.reload();
+    }).catch(()=>{ window.location.reload(); });
   } else {
-    currentUser = null;
-    DATA.art=[];DATA.proj=[];DATA.app=[];DATA.pessoa=[];
-    DATA_AA=[];WEEK=[];
-    localStorage.removeItem('sopa_data_offline_bak');
-    show('s-cfg');
-    document.getElementById('topbar').style.display = 'none';
-    document.getElementById('botNav').style.display = 'none';
+    window.location.reload();
   }
 }
 
