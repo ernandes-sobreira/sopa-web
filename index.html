@@ -2731,9 +2731,11 @@ function show(id){
   if(window._stopDrift) window._stopDrift();
   document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));
   $(id).classList.add('on');
-  // Show/hide universe button — hide only on home
+  // Universe button — always visible except on home
   const univBtn = document.getElementById('btn-universo');
   if(univBtn) univBtn.style.display = (id==='sh') ? 'none' : 'flex';
+  // Close any gmail modals when navigating away
+  if(id !== 's-gmail') document.querySelectorAll('[style*="position:fixed;inset:0;z-index:500"]').forEach(m=>m.remove());
 }
 function setCC(c){document.documentElement.style.setProperty('--cc',c||'#1C1C2E');}
 function toast(m){const t=$('tst');t.textContent=m;t.classList.add('sh');setTimeout(()=>t.classList.remove('sh'),2500);}
@@ -7188,17 +7190,8 @@ async function gerarConviteAluno(oid){
     }catch(e){ console.warn('Convite Firebase:', e); }
   }
 
-  // Show the link
-  const msg = `✅ Link de convite gerado para ${o.nome.split(' ')[0]}:\n\n${link}\n\nVálido por 30 dias. Copie e mande via WhatsApp ou e-mail.`;
-
-  // Copy to clipboard
-  if(navigator.clipboard){
-    await navigator.clipboard.writeText(link);
-    toast('✅ Link copiado! Cole no WhatsApp ou e-mail.');
-  }
-
-  // Also show in alert for safety
-  setTimeout(()=> alert(msg), 300);
+  // Show invite modal with share options
+  showInviteModal(o.nome.split(' ')[0], link);
 }
 
 // ══ UNIVERSE BACKGROUND (Professor SOPA) ══
@@ -12624,6 +12617,59 @@ function getMonthNum(monthName){
 }
 
 function closeGmailModal(){ const m=document.querySelector('[style*="position:fixed;inset:0;z-index:500"]'); if(m) m.remove(); }
+
+function showInviteModal(nome, link){
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;';
+  
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#0D1117;border:1px solid rgba(0,255,136,.2);border-radius:20px;padding:24px;max-width:360px;width:100%;';
+  
+  card.innerHTML = 
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.7rem;color:#00FF88;font-weight:700;letter-spacing:.1em;margin-bottom:12px;">CONVITE GERADO</div>' +
+    '<div style="font-size:.9rem;font-weight:700;color:#E8EAED;margin-bottom:6px;">'+nome+'</div>' +
+    '<div style="font-size:.72rem;color:#6B7280;margin-bottom:16px;">Válido por 30 dias</div>' +
+    '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:#00FF88;word-break:break-all;margin-bottom:16px;user-select:all;">'+link+'</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      '<button id="btn-copy-invite" style="background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);border-radius:10px;padding:11px;color:#00FF88;font-weight:700;font-size:.82rem;cursor:pointer;width:100%;">📋 Copiar link</button>' +
+      '<button id="btn-whatsapp-invite" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:11px;color:#25D366;font-weight:700;font-size:.82rem;cursor:pointer;width:100%;">💬 Enviar pelo WhatsApp</button>' +
+      '<button id="btn-email-invite" style="background:rgba(255,75,110,.12);border:1px solid rgba(255,75,110,.25);border-radius:10px;padding:11px;color:#FF4B6E;font-weight:700;font-size:.82rem;cursor:pointer;width:100%;">✉️ Enviar por email</button>' +
+      '<button id="btn-close-invite" style="background:none;border:none;color:#4B5563;font-size:.78rem;cursor:pointer;padding:6px;">Fechar</button>' +
+    '</div>';
+  
+  modal.appendChild(card);
+  document.body.appendChild(modal);
+  
+  const msg = 'Olá '+nome+'! Você foi convidado(a) para o SOPA Aluno. Acesse pelo link: '+link;
+  
+  document.getElementById('btn-copy-invite').onclick = ()=>{
+    navigator.clipboard.writeText(link).then(()=>{
+      const btn = document.getElementById('btn-copy-invite');
+      btn.textContent = '✅ Copiado!';
+      setTimeout(()=>btn.textContent='📋 Copiar link', 2000);
+    }).catch(()=>{ 
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = link; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      const btn = document.getElementById('btn-copy-invite');
+      btn.textContent = '✅ Copiado!';
+      setTimeout(()=>btn.textContent='📋 Copiar link', 2000);
+    });
+  };
+  
+  document.getElementById('btn-whatsapp-invite').onclick = ()=>{
+    window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+  };
+  
+  document.getElementById('btn-email-invite').onclick = ()=>{
+    window.open('mailto:?subject=Convite SOPA Aluno&body='+encodeURIComponent(msg), '_blank');
+  };
+  
+  document.getElementById('btn-close-invite').onclick = ()=>modal.remove();
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+}
 </script>
 
 </body>
