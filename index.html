@@ -6803,18 +6803,18 @@ function renderOrient(){
     const metasDone = (o.metas||[]).filter(m=>m.done).length;
     const metasTotal = (o.metas||[]).length;
     const pct = metasTotal > 0 ? Math.round(metasDone/metasTotal*100) : (o.pct||0);
-    const bgColor = cardIdx % 2 === 0 ? '#0D1117' : '#13191F';
+    const bgColor = cardIdx % 2 === 0 ? '#0D1117' : '#1C2333';
     const borderColor = o.cor || '#00D4FF';
 
     // Metas list
     const metasHtml = (o.metas||[]).length ? (o.metas||[]).map(m=>`
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);">
-        <div onclick="odToggleMetaInline('${o.id}','${m.id}')" style="width:18px;height:18px;border-radius:5px;border:2px solid ${m.done?borderColor:'rgba(255,255,255,.2)'};background:${m.done?borderColor+'33':'transparent'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+        <div data-action="toggle-meta" data-oid="${o.id}" data-mid="${m.id}" style="width:18px;height:18px;border-radius:5px;border:2px solid ${m.done?borderColor:'rgba(255,255,255,.2)'};background:${m.done?borderColor+'33':'transparent'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
           ${m.done?`<span style="color:${borderColor};font-size:.7rem;font-weight:900;">✓</span>`:''}
         </div>
         <span style="font-size:.78rem;color:${m.done?'#4B5563':'#C9D1D9'};text-decoration:${m.done?'line-through':'none'};flex:1;">${m.nome||m.name||''}</span>
         ${m.due?`<span style="font-size:.62rem;color:#4B5563;">${m.due}</span>`:''}
-        <button onclick="odDelMetaInline('${o.id}','${m.id}')" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;padding:0 2px;">✕</button>
+        <button data-action="del-meta" data-oid="${o.id}" data-mid="${m.id}" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;padding:0 2px;">✕</button>
       </div>`).join('') :
       '<div style="font-size:.72rem;color:#374151;padding:4px 0;">Sem metas</div>';
 
@@ -6823,7 +6823,7 @@ function renderOrient(){
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);">
         <span style="font-size:.65rem;color:#6B7280;flex-shrink:0;">📅 ${r.data||''}</span>
         <span style="font-size:.76rem;color:#9CA3AF;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.titulo||r.assunto||'Reunião'}</span>
-        <button onclick="odDelReuniaoInline('${o.id}','${r.id||r.data}')" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;">✕</button>
+        <button data-action="del-reuniao" data-oid="${o.id}" data-rid="${r.id||r.data}" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;">✕</button>
       </div>`).join('') :
       '<div style="font-size:.72rem;color:#374151;padding:4px 0;">Sem reuniões</div>';
 
@@ -6855,7 +6855,7 @@ function renderOrient(){
         <div style="padding:10px 14px 0;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <span style="font-size:.68rem;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;">Metas</span>
-            <button onclick="odAddMetaInline('${o.id}')" style="background:${borderColor}18;border:1px solid ${borderColor}33;border-radius:6px;padding:2px 8px;color:${borderColor};font-size:.65rem;font-weight:700;cursor:pointer;">+ Meta</button>
+            <button data-action="add-meta" data-oid="${o.id}" style="background:${borderColor}18;border:1px solid ${borderColor}33;border-radius:6px;padding:2px 8px;color:${borderColor};font-size:.65rem;font-weight:700;cursor:pointer;">+ Meta</button>
           </div>
           ${metasHtml}
         </div>
@@ -6864,16 +6864,16 @@ function renderOrient(){
         <div style="padding:10px 14px 0;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <span style="font-size:.68rem;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;">Reuniões</span>
-            <button onclick="odAddReuniaoInline('${o.id}')" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:2px 8px;color:#38BDF8;font-size:.65rem;font-weight:700;cursor:pointer;">+ Reunião</button>
+            <button data-action="add-reuniao" data-oid="${o.id}" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:2px 8px;color:#38BDF8;font-size:.65rem;font-weight:700;cursor:pointer;">+ Reunião</button>
           </div>
           ${reunioesHtml}
         </div>
 
         <!-- Action buttons -->
         <div style="display:flex;gap:6px;padding:10px 14px 12px;">
-          <button onclick="openOrientEdit('${o.id}')" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px;color:#9CA3AF;font-size:.72rem;cursor:pointer;">✏️ Editar</button>
-          <button onclick="odVincular('${o.id}')" style="flex:1;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:7px;color:#00FF88;font-size:.72rem;cursor:pointer;">🔗 Vincular</button>
-          <button onclick="delOrient('${o.id}')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:7px 10px;color:#EF4444;font-size:.75rem;cursor:pointer;">🗑️</button>
+          <button data-action="edit-orient" data-oid="${o.id}" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px;color:#9CA3AF;font-size:.72rem;cursor:pointer;">✏️ Editar</button>
+          <button data-action="vincular" data-oid="${o.id}" style="flex:1;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:7px;color:#00FF88;font-size:.72rem;cursor:pointer;">🔗 Vincular</button>
+          <button data-action="del-orient" data-oid="${o.id}" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:7px 10px;color:#EF4444;font-size:.75rem;cursor:pointer;">🗑️</button>
         </div>
       </div>`;
   }).join('');
@@ -12881,6 +12881,24 @@ function debugSyncAlunos(){
     toast('Nenhum orientando tem inviteCode salvo!');
   }
 }
+
+// ── Orient card event delegation ──
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  const oid = btn.dataset.oid;
+  const mid = btn.dataset.mid;
+  const rid = btn.dataset.rid;
+  if(action==='add-meta') odAddMetaInline(oid);
+  else if(action==='add-reuniao') odAddReuniaoInline(oid);
+  else if(action==='toggle-meta') odToggleMetaInline(oid, mid);
+  else if(action==='del-meta') odDelMetaInline(oid, mid);
+  else if(action==='del-reuniao') odDelReuniaoInline(oid, rid);
+  else if(action==='edit-orient') openOrientEdit(oid);
+  else if(action==='vincular'){ const o=ORIENTANDOS.find(x=>x.id==oid); if(o) gerarConvite(o); }
+  else if(action==='del-orient') delOrient(oid);
+});
 </script>
 
 </body>
