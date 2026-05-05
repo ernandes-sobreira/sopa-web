@@ -2504,6 +2504,17 @@ async function onUserLogin(user) {
   if (FIREBASE_MODE) {
     // Load from Firestore - starts empty if new user
     await loadFromFirestore(user.uid);
+    // Also merge localStorage in case there are unsaved local changes
+    try {
+      const saved = localStorage.getItem('sopa_data_offline_bak');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only use localStorage ORIENTANDOS if Firestore returned empty
+        if (parsed.ORIENTANDOS && parsed.ORIENTANDOS.length > 0 && ORIENTANDOS.length === 0) {
+          ORIENTANDOS = parsed.ORIENTANDOS;
+        }
+      }
+    } catch(e){}
   } else {
     // Load offline backup if available (Firebase not connected)
     const saved = localStorage.getItem('sopa_data_offline_bak');
@@ -2572,6 +2583,7 @@ async function loadFromFirestore(uid) {
       }
       if (d.WEEK !== undefined) WEEK = d.WEEK;
       if (d.PERFIL) PERFIL = {...PERFIL, ...d.PERFIL};
+      if (d.ORIENTANDOS) ORIENTANDOS = d.ORIENTANDOS;
     }
     // If no data exists yet, everything stays empty (new user)
     setSyncStatus('ok');
@@ -2595,7 +2607,16 @@ function scheduleSync() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => saveToFirestore(), 1500);
 }
-function saveData(){ scheduleSync(); }
+function saveData(){
+  // Save to localStorage IMMEDIATELY — synchronous, no delay
+  try {
+    localStorage.setItem('sopa_data_offline_bak', JSON.stringify({
+      DATA, DATA_AA, WEEK, PERFIL, ORIENTANDOS
+    }));
+  } catch(e){ console.warn('Save error:', e); }
+  // Then schedule Firebase sync
+  scheduleSync();
+}
 
 
 async function saveToFirestore() {
@@ -2632,7 +2653,9 @@ async function saveToFirestore() {
         docs: o.docs||[],
         info: {
           nome: o.nome, nivel: o.nivel, programa: o.programa,
-          tema: o.tema, prazo_entrega: o.prazo_entrega
+          tema: o.tema, prazo_entrega: o.prazo_entrega,
+          orientador_nome: PERFIL.nome||'Prof. Dr. Ernandes Sobreira',
+          orientador_email: currentUser?.email||''
         },
         prof_updated: new Date().toISOString(),
         inviteCode: o.inviteCode||'',
