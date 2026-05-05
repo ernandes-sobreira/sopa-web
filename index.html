@@ -6788,10 +6788,7 @@ function syncAlunoProgress(){
 
 // ── RENDER MAIN SCREEN ──
 function renderOrient(){
-  const el = document.getElementById('orient-content');
-  if(!el) return;
-
-  const filtros = ['Todos','Doutorado','Mestrado','Defesa agendada'];
+  const filtros=['Todos','Doutorado','Mestrado','Defesa agendada'];
   const filtTabs = filtros.map(f=>`
     <div class="orient-tab${_odFilter===f?' on':''}" onclick="_odFilter='${f}';renderOrient();">${f}</div>
   `).join('');
@@ -6802,102 +6799,142 @@ function renderOrient(){
     o.nivel===_odFilter
   );
 
-  const cards = ativos.map(o => {
-    const metasDone = o.metas.filter(m=>m.done).length;
-    const hoje = new Date();
-    const prazo = o.prazo_entrega ? new Date(o.prazo_entrega) : null;
-    const diasRestantes = prazo ? Math.ceil((prazo-hoje)/(1000*60*60*24)) : null;
-    const urgente = diasRestantes !== null && diasRestantes <= 30;
+  const cards = ativos.map((o, cardIdx) => {
+    const metasDone = (o.metas||[]).filter(m=>m.done).length;
+    const metasTotal = (o.metas||[]).length;
+    const pct = metasTotal > 0 ? Math.round(metasDone/metasTotal*100) : (o.pct||0);
+    const bgColor = cardIdx % 2 === 0 ? '#0D1117' : '#13191F';
+    const borderColor = o.cor || '#00D4FF';
+
+    // Metas list
+    const metasHtml = (o.metas||[]).length ? (o.metas||[]).map(m=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);">
+        <div onclick="odToggleMetaInline('${o.id}','${m.id}')" style="width:18px;height:18px;border-radius:5px;border:2px solid ${m.done?borderColor:'rgba(255,255,255,.2)'};background:${m.done?borderColor+'33':'transparent'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+          ${m.done?`<span style="color:${borderColor};font-size:.7rem;font-weight:900;">✓</span>`:''}
+        </div>
+        <span style="font-size:.78rem;color:${m.done?'#4B5563':'#C9D1D9'};text-decoration:${m.done?'line-through':'none'};flex:1;">${m.nome||m.name||''}</span>
+        ${m.due?`<span style="font-size:.62rem;color:#4B5563;">${m.due}</span>`:''}
+        <button onclick="odDelMetaInline('${o.id}','${m.id}')" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;padding:0 2px;">✕</button>
+      </div>`).join('') :
+      '<div style="font-size:.72rem;color:#374151;padding:4px 0;">Sem metas</div>';
+
+    // Reunioes list
+    const reunioesHtml = (o.reunioes||[]).length ? (o.reunioes||[]).slice(-3).reverse().map(r=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);">
+        <span style="font-size:.65rem;color:#6B7280;flex-shrink:0;">📅 ${r.data||''}</span>
+        <span style="font-size:.76rem;color:#9CA3AF;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.titulo||r.assunto||'Reunião'}</span>
+        <button onclick="odDelReuniaoInline('${o.id}','${r.id||r.data}')" style="background:none;border:none;color:#374151;cursor:pointer;font-size:.75rem;">✕</button>
+      </div>`).join('') :
+      '<div style="font-size:.72rem;color:#374151;padding:4px 0;">Sem reuniões</div>';
 
     return `
-      <div class="oc" style="border-color:${o.cor}33;">
-        <div class="oc-bar" style="background:${o.cor}"></div>
-        <div class="oc-head">
-          <div class="oc-av" style="background:${o.cor}22;border:2px solid ${o.cor};box-shadow:0 0 12px ${o.cor}44;color:${o.cor};font-weight:800;">${o.avatar}</div>
-          <div class="oc-info">
-            <div class="oc-name">${o.nome}</div>
-            <div class="oc-nivel">${o.nivel} · ${o.programa}</div>
-            ${o.ultimaAtualizacao ? `<div style="font-size:.62rem;color:#00FF8877;margin-top:2px;">🔄 Atualizado: ${new Date(o.ultimaAtualizacao).toLocaleDateString('pt-BR')}</div>` : ''}
-            <div style="font-size:.7rem;color:#6B7280;margin-top:2px;font-style:italic;line-height:1.3;">${o.tema.slice(0,70)}${o.tema.length>70?'...':''}</div>
+      <div style="background:${bgColor};border-left:4px solid ${borderColor};border-radius:12px;margin-bottom:2px;overflow:hidden;">
+        
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 14px 8px;">
+          <div style="width:42px;height:42px;border-radius:50%;background:${borderColor}22;border:2px solid ${borderColor};display:flex;align-items:center;justify-content:center;font-weight:800;color:${borderColor};font-size:1rem;flex-shrink:0;">
+            ${o.avatar||o.nome?.split(' ').map(w=>w[0]).join('').slice(0,2)||'?'}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;color:#E8EAED;font-size:.9rem;">${o.nome||''}</div>
+            <div style="font-size:.68rem;color:#6B7280;">${o.nivel||''} · ${o.programa||''}</div>
+            ${o.ultimaAtualizacao?`<div style="font-size:.6rem;color:${borderColor}88;">🔄 ${new Date(o.ultimaAtualizacao).toLocaleDateString('pt-BR')}</div>`:''}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1rem;font-weight:800;color:${borderColor};">${pct}%</div>
+            <div style="font-size:.6rem;color:#4B5563;">${metasDone}/${metasTotal} metas</div>
           </div>
         </div>
 
-        <div class="oc-prog-wrap">
-          <div class="oc-prog-label">
-            <span>Progresso geral</span>
-            <span style="color:${o.cor};font-weight:700">${o.prog}%</span>
-          </div>
-          <div class="oc-prog-bar">
-            <div class="oc-prog-fill" style="width:${o.prog}%;background:${o.cor}"></div>
-          </div>
+        <!-- Progress bar -->
+        <div style="height:3px;background:rgba(255,255,255,.06);margin:0 14px;">
+          <div style="height:3px;background:${borderColor};width:${pct}%;transition:width .3s;border-radius:2px;"></div>
         </div>
 
-        <div class="oc-stats">
-          <div class="oc-stat">
-            <span class="oc-stat-n">${metasDone}/${o.metas.length}</span>
-            <span class="oc-stat-l">Metas</span>
+        <!-- Metas section -->
+        <div style="padding:10px 14px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:.68rem;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;">Metas</span>
+            <button onclick="odAddMetaInline('${o.id}')" style="background:${borderColor}18;border:1px solid ${borderColor}33;border-radius:6px;padding:2px 8px;color:${borderColor};font-size:.65rem;font-weight:700;cursor:pointer;">+ Meta</button>
           </div>
-          <div class="oc-stat">
-            <span class="oc-stat-n">${o.reunioes.length}</span>
-            <span class="oc-stat-l">Reuniões</span>
-          </div>
-          <div class="oc-stat">
-            <span class="oc-stat-n">${o.docs.length}</span>
-            <span class="oc-stat-l">Docs</span>
-          </div>
+          ${metasHtml}
         </div>
 
-        ${o.proxima_entrega ? `
-        <div class="oc-body">
-          <div class="oc-next" style="${urgente?'background:#FEF2F2;border-color:#FCA5A5;color:#B91C1C':''}">
-            ${urgente?'⚠️':'📅'} ${o.proxima_entrega}
-            <span>${diasRestantes!==null ? (urgente?`${diasRestantes} dias restantes`:`em ${diasRestantes} dias`) : o.prazo_entrega}</span>
+        <!-- Reunioes section -->
+        <div style="padding:10px 14px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:.68rem;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;">Reuniões</span>
+            <button onclick="odAddReuniaoInline('${o.id}')" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:2px 8px;color:#38BDF8;font-size:.65rem;font-weight:700;cursor:pointer;">+ Reunião</button>
           </div>
-          <div class="oc-tags">
-            <span class="oc-tag" style="background:${o.cor}15;color:${o.cor}">${o.bolsa}</span>
-            ${o.tags.slice(0,2).map(t=>`<span class="oc-tag">${t}</span>`).join('')}
-          </div>
-        </div>` : '<div style="height:10px;"></div>'}
-
-        <div class="oc-footer">
-          <button class="oc-btn oc-btn-meet" onclick="odAddReuniao('${o.id}')">+ Reunião</button>
-          <button class="oc-btn oc-btn-doc"  onclick="odUploadDocCard('${o.id}')">+ Doc</button>
-          <button class="oc-btn oc-btn-open" onclick="odOpen('${o.id}')">Ver tudo →</button>
+          ${reunioesHtml}
         </div>
-        <div style="display:flex;gap:6px;padding:0 14px 12px;">
-          <button class="oc-btn" style="flex:1;background:#F8FAFF;border:1px solid #BFDBFE;color:#1D4ED8;font-size:.68rem;"
-            onclick="odEditCard('${o.id}')">✏️ Editar</button>
-          <button class="oc-btn" style="background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;font-size:.68rem;padding:8px 14px;"
-            onclick="odDelete('${o.id}')">🗑</button>
-          <button class="oc-btn" style="flex:1;background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D;font-size:.68rem;"
-            onclick="odLinkAluno('${o.id}')">🔗 Vincular aluno</button>
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:6px;padding:10px 14px 12px;">
+          <button onclick="openOrientEdit('${o.id}')" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px;color:#9CA3AF;font-size:.72rem;cursor:pointer;">✏️ Editar</button>
+          <button onclick="odVincular('${o.id}')" style="flex:1;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:7px;color:#00FF88;font-size:.72rem;cursor:pointer;">🔗 Vincular</button>
+          <button onclick="delOrient('${o.id}')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:7px 10px;color:#EF4444;font-size:.75rem;cursor:pointer;">🗑️</button>
         </div>
       </div>`;
   }).join('');
 
-  const total_d = ORIENTANDOS.filter(o=>o.nivel==='Doutorado').length;
-  const total_m = ORIENTANDOS.filter(o=>o.nivel==='Mestrado').length;
-  const atrasados = ORIENTANDOS.filter(o=>{
-    if(!o.prazo_entrega) return false;
-    return Math.ceil((new Date(o.prazo_entrega)-new Date())/(1000*60*60*24)) <= 14;
-  }).length;
-
-  el.innerHTML = `
-    <div class="orient-header">
-      <div class="orient-title">Orientandos Ativos</div>
-      <div class="orient-sub">${total_d} doutorandos · ${total_m} mestrandos${atrasados>0?` · <span style="color:#B91C1C;font-weight:700">⚠️ ${atrasados} prazo urgente</span>`:''}</div>
-      <div class="orient-tabs">${filtTabs}
-        <div class="orient-tab" onclick="odAddOrientando()" style="margin-left:auto;background:#0D1117;border-color:#E8EAED;color:#fff;">+ Novo</div>
+  document.getElementById('s-orient').innerHTML = `
+    <div style="padding:14px 14px 0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;color:#E8EAED;">🎓 Orientandos</div>
+          <div style="font-size:.72rem;color:#6B7280;">${ativos.length} de ${ORIENTANDOS.length}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="syncAlunoProgress()" style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:6px 12px;color:#00FF88;font-size:.68rem;font-weight:700;cursor:pointer;">🔄 Sync</button>
+          <button onclick="openOrientAdd()" style="background:linear-gradient(135deg,#00D4FF,#A855F7);border:none;border-radius:8px;padding:6px 14px;color:#050810;font-size:.72rem;font-weight:800;cursor:pointer;">+ Novo</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;">
+        ${filtTabs}
       </div>
     </div>
-    <div class="orient-grid">${cards || '<div style="padding:40px;text-align:center;color:#9CA3AF;">Nenhum orientando encontrado</div>'}</div>
-    <!-- Detail panel -->
-    <div class="od-panel" id="od-panel" onclick="if(event.target===this)odClose()">
-      <div class="od-sheet">
-        <div class="od-handle"></div>
-        <div id="od-sheet-content"></div>
-      </div>
-    </div>`;
+    <div style="padding:0 14px 80px;">${cards.length ? cards : '<div style="text-align:center;padding:40px;color:#4B5563;">Nenhum orientando</div>'}</div>`;
+}
+
+// Inline action helpers
+function odToggleMetaInline(oid, mid){
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  const m=(o.metas||[]).find(x=>x.id==mid); if(!m)return;
+  m.done=!m.done;
+  const metasTotal=o.metas.length;
+  const metasDone=o.metas.filter(x=>x.done).length;
+  o.pct=metasTotal?Math.round(metasDone/metasTotal*100):0;
+  saveData(); renderOrient();
+}
+function odDelMetaInline(oid, mid){
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  if(!confirm('Apagar meta?'))return;
+  o.metas=o.metas.filter(x=>x.id!=mid); saveData(); renderOrient();
+}
+function odDelReuniaoInline(oid, rid){
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  o.reunioes=o.reunioes.filter(r=>(r.id||r.data)!=rid); saveData(); renderOrient();
+}
+function odAddMetaInline(oid){
+  const nome=prompt('Nome da meta:'); if(!nome)return;
+  const due=prompt('Prazo (opcional, ex: 2026-06-30):');
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  if(!o.metas)o.metas=[];
+  o.metas.push({id:'m'+Date.now(),nome,due:due||'',done:false});
+  saveData(); renderOrient();
+}
+function odAddReuniaoInline(oid){
+  const titulo=prompt('Assunto da reunião:'); if(!titulo)return;
+  const data=prompt('Data (ex: 2026-05-10):') || new Date().toISOString().slice(0,10);
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  if(!o.reunioes)o.reunioes=[];
+  o.reunioes.push({id:'r'+Date.now(),titulo,data});
+  saveData(); renderOrient();
+}
+function odVincular(oid){
+  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+  gerarConvite(o);
 }
 
 // ── OPEN DETAIL ──
