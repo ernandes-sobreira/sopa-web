@@ -50,7 +50,7 @@ body{background:var(--bg);font-family:var(--ff);color:var(--tx);min-height:100vh
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* SCREENS */
-.sc{display:none;animation:fi .2s ease;position:relative;z-index:1;}.sc.on{display:block;}
+.sc{height:calc(100vh - 56px - 48px);display:none;animation:fi .2s ease;position:relative;z-index:1;}.sc.on{height:calc(100vh - 56px - 48px);overflow-y:auto;display:block;}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes pls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
@@ -2061,7 +2061,7 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 </header>
 
 <!-- APP SCREENS -->
-<div id="sh"  class="sc"></div>
+<div id="sh"  class="sc" style="overflow:hidden;"></div>
 <div id="sl"  class="sc"></div>
 <div id="sad" class="sc"></div>
 <div id="spd" class="sc"></div>
@@ -2731,23 +2731,24 @@ function renderHome(){
   const userName = currentUser?.displayName?.split(' ')[0] || 'Ernandes';
 
   $('sh').innerHTML = `
-    <div style="position:fixed;top:56px;left:0;right:0;bottom:48px;overflow:hidden;background:transparent;">
-      <svg id="home-graph" width="100%" height="100%" style="display:block;background:transparent;"></svg>
-      <button class="ai-fab visible" id="ai-fab" onclick="openChat()" style="position:absolute;bottom:16px;left:16px;">🤖</button>
-      <button class="fab" id="home-fab" onclick="openCapture()" style="position:absolute;bottom:16px;right:16px;">✏️</button>
+    <div style="width:100%;height:100%;position:relative;overflow:hidden;">
+      <svg id="home-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;"></svg>
+      <button class="ai-fab" id="ai-fab" onclick="openChat()"
+        style="position:absolute;bottom:16px;left:16px;display:flex;">🤖</button>
+      <button class="fab" id="home-fab" onclick="openCapture()"
+        style="position:absolute;bottom:16px;right:16px;display:flex;">✏️</button>
       <div id="alert-panel" class="alert-panel"></div>
       <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
-        font-family:'JetBrains Mono',monospace;font-size:.58rem;color:rgba(255,255,255,.2);
-        white-space:nowrap;pointer-events:none;">
+        font-family:'JetBrains Mono',monospace;font-size:.58rem;
+        color:rgba(255,255,255,.25);white-space:nowrap;pointer-events:none;">
         ${FIREBASE_MODE?'☁️':'📂'} ${userName}
       </div>
     </div>`;
 
-  const pcf = document.getElementById('perfil-card-foto');
-  if(pcf) pcf.src = FOTO_PERFIL;
+  // Profile photo handled in perfil screen
 
-  setTimeout(()=>buildHomeGraph(), 200);
-  setTimeout(()=>{ renderAlertChips(); updateAlertBadge(); }, 600);
+  setTimeout(()=>buildHomeGraph(), 300);
+  setTimeout(()=>{ renderAlertChips(); updateAlertBadge(); }, 700);
 }
 
 function showNodeMenu(d, event){
@@ -2757,7 +2758,7 @@ function showNodeMenu(d, event){
   if(!d.subnodes && d.action){ d.action(); return; }
   if(!d.subnodes){ return; }
 
-  const svgRect = document.getElementById('home-graph').getBoundingClientRect();
+  const svgRect = document.getElementById('home-svg').getBoundingClientRect();
   // Get node screen position from transform
   const nodeEl = event.currentTarget || event.target.closest('g');
 
@@ -2811,9 +2812,35 @@ function showNodeMenu(d, event){
   document.body.appendChild(menu);
 }
 
+// ── UNIVERSO — NÓS E LINKS ──
+const HNODES = [
+  {id:'prof',       label:'Ernandes',  sub:'UNEMAT',     r:50, color:'#00D4FF', type:'center', action:()=>openPerfil()},
+  {id:'pesquisa',   label:'Pesquisa',  sub:'102 artigos', r:40, color:'#00D4FF', type:'main',
+   subnodes:[{label:'📄 Artigos',action:()=>openProducao('artigos')},{label:'📰 Citações',action:()=>openCitacoes()},{label:'🕸️ Redes',action:()=>openRedes()},{label:'📖 Bibliometria',action:()=>openBiblio()},{label:'🎤 Palestras',action:()=>openPalestras()},{label:'💻 Plataformas',action:()=>openPlataformas()}]},
+  {id:'projetos',   label:'Projetos',  sub:'ativos',      r:38, color:'#38BDF8', type:'main',
+   subnodes:[{label:'🔬 Meus projetos',action:()=>openList('proj')},{label:'💡 Pipeline',action:()=>openPipeline()},{label:'🌿 Consultoria',action:()=>openConsultoria()},{label:'🖼️ Galeria',action:()=>openGaleria()}]},
+  {id:'orientacao', label:'Orientação',sub:'alunos',      r:38, color:'#00FF88', type:'main',
+   subnodes:[{label:'🎓 Orientandos',action:()=>openOrient()},{label:'🏛️ Bancas',action:()=>openProducao('bancas')},{label:'📋 Pareceres',action:()=>openPareceres()},{label:'🏫 Turmas',action:()=>openTurmas()}]},
+  {id:'agenda',     label:'Agenda',    sub:'prazos',      r:36, color:'#FF4B6E', type:'main',
+   subnodes:[{label:'📅 Calendário',action:()=>openAgenda()},{label:'🔔 Alertas',action:()=>openAlertScreen()},{label:'✏️ Diário',action:()=>openDiario()},{label:'📧 Gmail',action:()=>openGmail()}]},
+  {id:'ia',         label:'SOPA IA',   sub:'assistente',  r:36, color:'#A855F7', type:'main',
+   subnodes:[{label:'🤖 Chat rápido',action:()=>openChat()},{label:'💬 Tela cheia',action:()=>openAssistente()},{label:'🔍 Busca',action:()=>openBusca()}]},
+  {id:'gestao',     label:'Gestão',    sub:'acadêmica',   r:36, color:'#FF6B35', type:'main',
+   subnodes:[{label:'📊 Dashboard',action:()=>openDashboard()},{label:'👤 Perfil',action:()=>openPerfil()},{label:'📋 Burocracia',action:()=>openBurocracia()}]},
+];
+
+const HLINKS = [
+  {s:'prof', t:'pesquisa',   v:10, d:180},
+  {s:'prof', t:'projetos',   v:10, d:180},
+  {s:'prof', t:'orientacao', v:10, d:180},
+  {s:'prof', t:'agenda',     v:10, d:180},
+  {s:'prof', t:'ia',         v:10, d:180},
+  {s:'prof', t:'gestao',     v:10, d:180},
+];
+
 function buildHomeGraph(){
   // Wait for DOM
-  const svgEl = document.getElementById('home-graph');
+  const svgEl = document.getElementById('home-svg');
   if(!svgEl){ setTimeout(buildHomeGraph, 300); return; }
   if(typeof d3 === 'undefined'){ setTimeout(buildHomeGraph, 300); return; }
 
@@ -2828,19 +2855,13 @@ function buildHomeGraph(){
   if(ctr){ ctr.fx=W/2; ctr.fy=H/2; }
 
   // Initial positions
+  // 6 main nodes evenly around center
   const mainNodes = nodes.filter(n=>n.type==='main');
   mainNodes.forEach((n,idx)=>{
     const angle = (idx/mainNodes.length)*Math.PI*2 - Math.PI/2;
-    n.x = W/2 + Math.cos(angle)*Math.min(W,H)*.3;
-    n.y = H/2 + Math.sin(angle)*Math.min(W,H)*.3;
-  });
-  nodes.filter(n=>n.type==='sat').forEach(n=>{
-    const lnk = HLINKS.find(l=>l.t===n.id);
-    const par = lnk ? nodes.find(p=>p.id===lnk.s) : null;
-    const px = par?.x??W/2, py = par?.y??H/2;
-    const a = Math.random()*Math.PI*2;
-    n.x = px + Math.cos(a)*100;
-    n.y = py + Math.sin(a)*100;
+    const dist = Math.min(W,H) * 0.35;
+    n.x = W/2 + Math.cos(angle)*dist;
+    n.y = H/2 + Math.sin(angle)*dist;
   });
 
   // Clear and setup SVG
@@ -2858,12 +2879,11 @@ function buildHomeGraph(){
   // Simulation
   const sim = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(links).id(d=>d.id).distance(d=>d.d).strength(.5))
-    .force('charge', d3.forceManyBody()
-      .strength(d=>d.type==='center'?-1800:d.type==='main'?-700:-250))
-    .force('collision', d3.forceCollide().radius(d=>d.r+15).strength(.85))
-    .force('x', d3.forceX(W/2).strength(d=>d.type==='center'?1:.03))
-    .force('y', d3.forceY(H/2).strength(d=>d.type==='center'?1:.03))
-    .alphaDecay(.012).velocityDecay(.3);
+    .force('charge', d3.forceManyBody().strength(d=>d.type==='center'?-2000:-900))
+    .force('collision', d3.forceCollide().radius(d=>d.r+25).strength(.9))
+    .force('x', d3.forceX(W/2).strength(d=>d.type==='center'?1:.02))
+    .force('y', d3.forceY(H/2).strength(d=>d.type==='center'?1:.02))
+    .alphaDecay(.01).velocityDecay(.28);
 
   // Links
   const linkSel = g.append('g').selectAll('line').data(links).enter()
