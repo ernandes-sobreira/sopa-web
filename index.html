@@ -12740,6 +12740,63 @@ function showInviteModal(nome, link){
   document.getElementById('btn-close-invite').onclick = ()=>modal.remove();
   modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
 }
+
+function debugSyncAlunos(){
+  if(!FIREBASE_MODE || typeof db === 'undefined'){
+    toast('Firebase não conectado!');
+    return;
+  }
+  
+  let report = 'DEBUG SYNC\n\n';
+  report += 'Orientandos: ' + ORIENTANDOS.length + '\n';
+  report += 'Seu email: ' + (currentUser?.email || 'N/A') + '\n\n';
+  
+  // Check convites collection
+  report += '--- CONVITES ---\n';
+  ORIENTANDOS.forEach(o=>{
+    report += o.nome.split(' ')[0] + ': inviteCode=' + (o.inviteCode||'NENHUM') + '\n';
+  });
+  
+  // Check vinculos
+  report += '\n--- VINCULOS (buscando) ---\n';
+  
+  db.collection('vinculos').limit(10).get()
+  .then(snap=>{
+    if(snap.empty){
+      report += 'Coleção vinculos VAZIA!\n';
+    } else {
+      snap.forEach(doc=>{
+        const d = doc.data();
+        report += 'Doc: ' + doc.id.slice(0,8) + '...\n';
+        report += '  aluno: ' + (d.aluno_nome||'?') + '\n';
+        report += '  orientador_email: ' + (d.orientador_email||'VAZIO') + '\n';
+        report += '  updated: ' + (d.updated||'N/A') + '\n';
+        report += '  metas: ' + (d.metas?.length||0) + ' metas\n';
+      });
+    }
+    alert(report);
+  }).catch(e=>{
+    alert('Erro ao ler vinculos: ' + e.message);
+  });
+  
+  // Also check convites for first orientando with inviteCode
+  const o = ORIENTANDOS.find(or=>or.inviteCode);
+  if(o){
+    db.collection('convites').doc(o.inviteCode).get()
+    .then(doc=>{
+      if(doc.exists){
+        const d = doc.data();
+        const hasProgress = !!d.aluno_progress;
+        const metas = d.aluno_progress?.metas?.length || 0;
+        toast('Convite ' + o.nome.split(' ')[0] + ': ' + (hasProgress ? metas+' metas' : 'SEM progresso'));
+      } else {
+        toast('Convite ' + o.inviteCode + ' não existe no Firebase!');
+      }
+    });
+  } else {
+    toast('Nenhum orientando tem inviteCode salvo!');
+  }
+}
 </script>
 
 </body>
