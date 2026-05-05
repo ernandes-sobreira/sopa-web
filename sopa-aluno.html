@@ -573,7 +573,7 @@ async function onLogin(user){
       const sharedSnap = await db.collection('shared_orient').doc(docId).get();
       if(sharedSnap.exists){
         const sd = sharedSnap.data();
-        // Merge professor metas keeping aluno done-status
+        // Load professor metas preserving aluno done-status
         if(sd.metas && sd.metas.length){
           const merged = sd.metas.map(pm=>{
             const existing = (STATE.metas||[]).find(m=>m.id===pm.id||m.nome===pm.nome);
@@ -581,11 +581,16 @@ async function onLogin(user){
           });
           STATE.metas = merged;
         }
-        // Merge reunioes
+        // Load reunioes from professor
         if(sd.reunioes && sd.reunioes.length){
-          const existingDates = new Set((STATE.reunioes||[]).map(r=>r.data+r.titulo));
-          const newReunioes = sd.reunioes.filter(r=>!existingDates.has(r.data+r.titulo));
-          STATE.reunioes = [...(STATE.reunioes||[]), ...newReunioes];
+          const existingKeys = new Set((STATE.reunioes||[]).map(r=>r.data+'|'+r.titulo));
+          const newR = sd.reunioes.filter(r=>!existingKeys.has(r.data+'|'+r.titulo));
+          STATE.reunioes = [...(STATE.reunioes||[]), ...newR];
+        }
+        // Load orientador info if not set
+        if(sd.info && !STATE.perfil.orientador_email){
+          STATE.perfil.orientador_nome = sd.info.orientador_nome || 'Prof. Dr. Ernandes Sobreira';
+          STATE.perfil.orientador_email = sd.info.orientador_email || '';
         }
       }
     }catch(e){ console.warn('Load shared_orient:', e); }
@@ -1605,6 +1610,7 @@ async function checkAccess(user){
           if(snap.data().orientador_email){
             STATE.perfil.orientador_email = STATE.perfil.orientador_email || snap.data().orientador_email;
             STATE.perfil.orientador_nome  = STATE.perfil.orientador_nome  || snap.data().orientador_nome || 'Prof. Dr. Ernandes Sobreira';
+            autoSave();
           }
           return true;
         }
