@@ -5297,7 +5297,11 @@ function netBuildForce(netId, data) {
   const H = 420;
 
   const nodes = (data.nodes||[]).map(d=>({...d}));
-  const links = (data.links||[]).map(d=>({...d}));
+  // Support both 'links' and 'edges', normalize weight to 'value'
+  const links = (data.links||data.edges||[]).map(d=>({
+    ...d,
+    value: d.value||d.w||d.weight||1
+  }));
 
   // Fix center node
   const ctr = nodes.find(n=>n.type==='center'||n.id==='__eu__'||n.id==='Ernandes');
@@ -5336,15 +5340,14 @@ function netBuildForce(netId, data) {
     .force('y', d3.forceY(H/2).strength(.04))
     .alphaDecay(.015).velocityDecay(.3);
 
-  // Links
+  // Links — clean lines connecting people
   const linkSel = g.append('g').selectAll('line').data(links).enter()
     .append('line')
     .attr('stroke', d=>{
       const src=nodes.find(n=>n.id===(typeof d.source==='object'?d.source.id:d.source));
-      return src ? src.c+'44' : '#333';
+      return src ? src.c+'55' : '#333';
     })
-    .attr('stroke-width', d=>d.cross?1:Math.max(1,Math.log((d.value||1)+1)))
-    .attr('stroke-dasharray', d=>d.cross?'3,3':null)
+    .attr('stroke-width', d=>Math.max(1,Math.log((d.value||1)+1)))
     .attr('stroke-linecap','round');
 
   // Node groups
@@ -5372,12 +5375,46 @@ function netBuildForce(netId, data) {
       }
     });
 
-  // Pulse ring for center
-  nodeG.filter(d=>d.type==='center')
-    .append('circle').attr('r',d=>(d.size||20)+14)
-    .attr('fill','none').attr('stroke',d=>d.c).attr('stroke-width',1).attr('opacity',.2)
-    .style('animation','cosmos-pulse 3s ease-out infinite')
-    .style('transform-origin','center');
+  // Pulse ring for ALL nodes — each person radiates energy
+  // Outer slow pulse
+  nodeG.append('circle')
+    .attr('r', d=>(d.size||8)+12)
+    .attr('fill','none')
+    .attr('stroke', d=>d.c)
+    .attr('stroke-width', d=>d.type==='center'?1.5:0.8)
+    .attr('opacity', 0)
+    .each(function(d,i){
+      const el = d3.select(this);
+      const delay = (i * 137) % 2000; // golden angle offset — each node different
+      const dur = d.type==='center' ? 2000 : d.type==='colab' ? 2800 : 3500;
+      function doPulse(){
+        el.attr('r',(d.size||8)+4).attr('opacity',0.5)
+          .transition().duration(dur).ease(d3.easeLinear)
+          .attr('r',(d.size||8)+22).attr('opacity',0)
+          .on('end', doPulse);
+      }
+      setTimeout(doPulse, delay);
+    });
+
+  // Second pulse ring — offset timing for layered effect
+  nodeG.append('circle')
+    .attr('r', d=>(d.size||8)+6)
+    .attr('fill','none')
+    .attr('stroke', d=>d.c)
+    .attr('stroke-width', 0.6)
+    .attr('opacity', 0)
+    .each(function(d,i){
+      const el = d3.select(this);
+      const delay = ((i * 137) % 2000) + 800;
+      const dur = d.type==='center' ? 1500 : 2200;
+      function doPulse(){
+        el.attr('r',(d.size||8)+2).attr('opacity',0.35)
+          .transition().duration(dur).ease(d3.easeLinear)
+          .attr('r',(d.size||8)+16).attr('opacity',0)
+          .on('end', doPulse);
+      }
+      setTimeout(doPulse, delay);
+    });
 
   // Glow halo
   nodeG.append('circle').attr('r',d=>(d.size||8)+6)
@@ -5419,7 +5456,7 @@ function netBuildForce(netId, data) {
     .attr('y',0).attr('pointer-events','none')
     .text(d=>d.papers||'');
 
-  sim.on('tick',()=>{
+    sim.on('tick',()=>{
     linkSel
       .attr('x1',d=>d.source.x||W/2).attr('y1',d=>d.source.y||H/2)
       .attr('x2',d=>d.target.x||W/2).attr('y2',d=>d.target.y||H/2);
@@ -9706,11 +9743,25 @@ function renderPalestras(){
 
   // Filter
   const filtered = all.filter(p=>{
-    const matchFilter = _palFilter==='Todos' || p.tipo.includes(_palFilter.toUpperCase()) || p.tipo===_palFilter;
+    const matchFilter = _palFilter==='Todos' || (() => {
+      const pNorm = norm(p.tipo);
+      const mapped = TIPO_MAP[_palFilter] || [];
+      return mapped.some(t => pNorm.includes(norm(t))) || pNorm.includes(norm(_palFilter));
+    })();
     const q = _palSearch.toLowerCase();
     const matchSearch = !q || p.titulo.toLowerCase().includes(q) || (p.evento||'').toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
+
+  // Map filter labels to Lattes NATUREZA values
+  const TIPO_MAP = {
+    'Palestra': ['PALESTRA','CONFERENCIA-MAGISTRAL','CONFERÊNCIA-MAGISTRAL'],
+    'Conferência': ['CONFERENCIA','SIMPOSIO','CONGRESSO','SEMINARIO','WORKSHOP','ENCONTRO'],
+    'Comunicação': ['COMUNICACAO','RESUMO','APRESENTACAO','POSTER','PAINEL'],
+    'Minicurso': ['MINICURSO','CURSO','OFICINA'],
+    'Organização': ['ORGANIZACAO','ORGANIZACAO-DE-EVENTO'],
+  };
+  const norm = s => (s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
   const filtrosBtns = ['Todos','Palestra','Conferência','Comunicação','Minicurso','Organização'].map(f=>`
     <button class="capture-type${_palFilter===f?' on':''}"
@@ -13080,6 +13131,7 @@ function pushToAluno(o){
   },{merge:true}).then(()=>toast('📤 Enviado para '+o.nome.split(' ')[0]))
    .catch(e=>console.warn('pushToAluno:',e));
 }
+
 </script>
 
 </body>
