@@ -2,8 +2,8 @@
 // SOPA Service Worker — PWA
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'sopa-v4';
-const CACHE_STATIC = 'sopa-static-v4';
+const CACHE_NAME = 'sopa-v13';
+const CACHE_STATIC = 'sopa-static-v13';
 
 // Arquivos para cache offline
 const STATIC_ASSETS = [
