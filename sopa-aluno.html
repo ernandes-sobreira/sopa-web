@@ -1687,6 +1687,35 @@ async function gerarConvite(alunoNome){
   const base = window.location.origin + window.location.pathname;
   return `${base}?invite=${code}`;
 }
+
+async function alunoSyncNow(){
+  if(!FIREBASE_MODE || !currentUser) return;
+  const savedCode = localStorage.getItem('sopa_invite_code');
+  if(!savedCode){ toast('Sem código de convite'); return; }
+  try{
+    const snap = await db.collection('shared_orient').doc(savedCode).get();
+    if(!snap.exists){ toast('Aguardando orientador...'); return; }
+    const sd = snap.data();
+    if(sd.metas && sd.metas.length){
+      STATE.metas = sd.metas.map(pm=>{
+        const ex = (STATE.metas||[]).find(m=>m.id===pm.id||m.nome===pm.nome);
+        return ex ? {...pm, done:ex.done} : pm;
+      });
+    }
+    if(sd.reunioes && sd.reunioes.length){
+      const keys = new Set((STATE.reunioes||[]).map(r=>r.data+'|'+r.titulo));
+      STATE.reunioes = [...(STATE.reunioes||[]), ...sd.reunioes.filter(r=>!keys.has(r.data+'|'+r.titulo))];
+    }
+    if(sd.info){
+      STATE.perfil.orientador_nome = sd.info.orientador_nome || STATE.perfil.orientador_nome;
+      if(sd.info.orientador_email) STATE.perfil.orientador_email = sd.info.orientador_email;
+    }
+    autoSave();
+    renderMetas();
+    renderHome();
+    toast('✅ Dados atualizados do orientador!');
+  }catch(e){ toast('Erro: '+e.message); }
+}
 </script>
 </body>
 </html>

@@ -6975,7 +6975,7 @@ function odToggleMetaInline(oid, mid){
   const metasTotal=o.metas.length;
   const metasDone=o.metas.filter(x=>x.done).length;
   o.pct=metasTotal?Math.round(metasDone/metasTotal*100):0;
-  saveData(); renderOrient();
+  saveData(); pushToAluno(o); renderOrient();
 }
 function odDelMetaInline(oid, mid){
   const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
@@ -7006,7 +7006,7 @@ function odAddMetaInline(oid){
     const o = ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
     if(!o.metas)o.metas=[];
     o.metas.push({id:'m'+Date.now(),nome,due:due||'',done:false});
-    saveData(); modal.remove(); renderOrient();
+    saveData(); pushToAluno(o); modal.remove(); renderOrient();
   };
   modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
   setTimeout(()=>modal.querySelector('#om-nome').focus(),100);
@@ -7034,7 +7034,7 @@ function odAddReuniaoInline(oid){
     const o = ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
     if(!o.reunioes)o.reunioes=[];
     o.reunioes.push({id:'r'+Date.now(),titulo,data,notas});
-    saveData(); modal.remove(); renderOrient();
+    saveData(); pushToAluno(o); modal.remove(); renderOrient();
   };
   modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
   setTimeout(()=>modal.querySelector('#or-titulo').focus(),100);
@@ -13047,7 +13047,7 @@ function odAddDocInline(oid){
     const o = ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
     if(!o.docs)o.docs=[];
     o.docs.push({id:'d'+Date.now(),nome,tipo,data,url});
-    saveData(); modal.remove(); renderOrient();
+    saveData(); pushToAluno(o); modal.remove(); renderOrient();
   };
   modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
   setTimeout(()=>document.getElementById('od-doc-nome').focus(),100);
@@ -13093,6 +13093,24 @@ function showEditOrientModal(oid){
     toast('✅ '+o.nome.split(' ')[0]+' atualizado');
   };
   modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+}
+
+function pushToAluno(o){
+  if(!FIREBASE_MODE || !db || !o.inviteCode) return;
+  const profEmail = currentUser?.email || '';
+  const profNome = PERFIL?.nome || 'Prof. Dr. Ernandes Sobreira';
+  db.collection('shared_orient').doc(o.inviteCode).set({
+    metas: o.metas||[],
+    reunioes: o.reunioes||[],
+    docs: o.docs||[],
+    info:{
+      nome:o.nome, nivel:o.nivel, programa:o.programa, tema:o.tema,
+      orientador_nome:profNome, orientador_email:profEmail
+    },
+    prof_updated: new Date().toISOString(),
+    inviteCode: o.inviteCode
+  },{merge:true}).then(()=>toast('📤 Enviado para '+o.nome.split(' ')[0]))
+   .catch(e=>console.warn('pushToAluno:',e));
 }
 </script>
 
