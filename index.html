@@ -6764,61 +6764,37 @@ function manualSyncAlunos(){
 
 function syncAlunoProgress(){
   if(!FIREBASE_MODE || typeof db === 'undefined') return;
-  let updated = false;
-
-  // Method 1: sync by inviteCode (convites collection)
-  ORIENTANDOS.forEach(o=>{
-    if(!o.inviteCode) return;
-    db.collection('convites').doc(o.inviteCode).get()
-    .then(doc=>{
-      if(!doc.exists) return;
-      const data = doc.data();
-      const prog = data.aluno_progress || data;
-      if(prog.updated || prog.metas){
-        if(prog.pct !== undefined) o.pct = prog.pct;
-        if(prog.metas && prog.metas.length) o.metas = prog.metas;
-        if(prog.reunioes) o.reunioes = prog.reunioes;
-        if(prog.updated) o.ultimaAtualizacao = prog.updated;
-        updated = true;
-      }
-    }).catch(e=>console.warn('Sync convites:', e));
-  });
-
-  // Method 2: sync by orientador email (vinculos collection)
-  const profEmails = ['ernandes.sobreira@gmail.com','ernandes.sobreira@unemat.br'];
-  const emailToTry = currentUser?.email || profEmails[0];
-  
-  db.collection('vinculos')
-    .where('orientador_email','==',emailToTry)
-    .get()
-    .then(snap=>{
-      snap.forEach(doc=>{
-        const prog = doc.data();
-        const o = ORIENTANDOS.find(or=>
-          (or.email && or.email===prog.aluno_email) ||
-          (or.aluno_uid && or.aluno_uid===prog.aluno_uid) ||
-          (or.nome && prog.aluno_nome && 
-           or.nome.toLowerCase().includes((prog.aluno_nome||'').split(' ')[0].toLowerCase()))
-        );
-        if(o){
-          if(prog.pct !== undefined) o.pct = prog.pct;
-          if(prog.metas && prog.metas.length){ o.metas = prog.metas; }
-          if(prog.reunioes && prog.reunioes.length) o.reunioes = prog.reunioes;
-          if(prog.updated) o.ultimaAtualizacao = prog.updated;
-          if(prog.aluno_uid) o.aluno_uid = prog.aluno_uid;
-          updated = true;
+  toast('🔄 Sincronizando...');
+  let count = 0;
+  const promises = ORIENTANDOS.filter(o=>o.inviteCode).map(o=>{
+    return db.collection('shared_orient').doc(o.inviteCode).get()
+      .then(doc=>{
+        if(!doc.exists) return;
+        const sd = doc.data();
+        // Get aluno done-status updates
+        if(sd.metas && sd.metas.length){
+          o.metas.forEach(pm=>{
+            const am = sd.metas.find(m=>m.id===pm.id||m.nome===pm.nome);
+            if(am !== undefined) pm.done = am.done;
+          });
         }
-      });
-      if(updated){ 
-        saveData(); 
-        renderOrient(); 
-        toast('✅ Orientandos sincronizados!'); 
-      } else {
-        toast('ℹ️ Nenhuma atualização encontrada');
-      }
-    }).catch(e=>{ console.warn('Sync vinculos:', e); console.warn('Sync error'); });
-
-  setTimeout(()=>{ if(updated){ saveData(); renderOrient(); } }, 2000);
+        if(sd.aluno_updated) o.ultimaAtualizacao = sd.aluno_updated;
+        if(sd.aluno_uid) o.aluno_uid = sd.aluno_uid;
+        // Calculate pct from metas
+        const done = o.metas.filter(m=>m.done).length;
+        o.pct = o.metas.length ? Math.round(done/o.metas.length*100) : 0;
+        count++;
+      }).catch(e=>console.warn('Sync',o.nome,e));
+  });
+  Promise.all(promises).then(()=>{
+    if(count > 0){
+      saveData();
+      renderOrient();
+      toast('✅ '+count+' orientando(s) sincronizado(s)');
+    } else {
+      toast('ℹ️ Nenhuma atualização');
+    }
+  });
 }
 
 // ── RENDER MAIN SCREEN ──
