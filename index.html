@@ -6699,23 +6699,52 @@ function openOrient(){
 
 function syncAlunoProgress(){
   if(!FIREBASE_MODE || typeof db === 'undefined') return;
+  let updated = false;
+
+  // Method 1: sync by inviteCode (convites collection)
   ORIENTANDOS.forEach(o=>{
     if(!o.inviteCode) return;
     db.collection('convites').doc(o.inviteCode).get()
     .then(doc=>{
       if(!doc.exists) return;
       const data = doc.data();
-      if(data.aluno_progress){
-        // Update local orientando data
-        const prog = data.aluno_progress;
+      const prog = data.aluno_progress || data;
+      if(prog.updated || prog.metas){
         if(prog.pct !== undefined) o.pct = prog.pct;
-        if(prog.metas) o.metas = prog.metas;
-        if(prog.notas) o.notas = prog.notas;
-        if(prog.ultima_atualizacao) o.ultimaAtualizacao = prog.ultima_atualizacao;
+        if(prog.metas && prog.metas.length) o.metas = prog.metas;
+        if(prog.reunioes) o.reunioes = prog.reunioes;
+        if(prog.updated) o.ultimaAtualizacao = prog.updated;
+        updated = true;
       }
-    }).catch(e=>console.warn('Sync aluno:', e));
+    }).catch(e=>console.warn('Sync convites:', e));
   });
-  setTimeout(()=>renderOrient(), 1500);
+
+  // Method 2: sync by orientador email (vinculos collection)
+  if(currentUser?.email){
+    db.collection('vinculos')
+      .where('orientador_email','==',currentUser.email)
+      .get()
+      .then(snap=>{
+        snap.forEach(doc=>{
+          const prog = doc.data();
+          // Find matching orientando by email or name
+          const o = ORIENTANDOS.find(or=>
+            (or.email && or.email===prog.aluno_email) ||
+            (or.nome && prog.aluno_nome && or.nome.toLowerCase().includes(prog.aluno_nome.split(' ')[0].toLowerCase()))
+          );
+          if(o){
+            if(prog.pct !== undefined) o.pct = prog.pct;
+            if(prog.metas && prog.metas.length) o.metas = prog.metas;
+            if(prog.reunioes) o.reunioes = prog.reunioes;
+            if(prog.updated) o.ultimaAtualizacao = prog.updated;
+            updated = true;
+          }
+        });
+        if(updated){ saveData(); renderOrient(); toast('🔄 Dados dos orientandos atualizados'); }
+      }).catch(e=>console.warn('Sync vinculos:', e));
+  }
+
+  setTimeout(()=>{ if(updated){ saveData(); renderOrient(); } }, 2000);
 }
 
 // ── RENDER MAIN SCREEN ──

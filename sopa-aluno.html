@@ -599,20 +599,35 @@ function enterApp(){
 async function saveFirestore(){
   if(!FIREBASE_MODE || !currentUser?.uid) return;
   try{
+    // Save full state to 'alunos' collection
     await db.collection('alunos').doc(currentUser.uid).set(STATE, {merge:true});
-    // Also write vinculo so professor can find
-    if(STATE.perfil.orientador_email){
-      await db.collection('vinculos').doc(currentUser.uid).set({
+
+    const progressData = {
+      aluno_uid: currentUser.uid,
+      aluno_nome: STATE.perfil.nome || '',
+      aluno_email: currentUser.email || '',
+      orientador_email: STATE.perfil.orientador_email || '',
+      updated: new Date().toISOString(),
+      metas: STATE.metas || [],
+      reunioes: STATE.reunioes || [],
+      arquivos: STATE.arquivos || [],
+      artigos: STATE.artigos || [],
+      prog_metas: STATE.metas.filter(m=>m.done).length + '/' + STATE.metas.length,
+      pct: STATE.metas.length ? Math.round(STATE.metas.filter(m=>m.done).length/STATE.metas.length*100) : 0,
+    };
+
+    // Write to vinculos so professor can find by orientador email
+    await db.collection('vinculos').doc(currentUser.uid).set(progressData);
+
+    // Also write to convites if we have the inviteCode
+    const savedCode = localStorage.getItem('sopa_invite_code');
+    if(savedCode){
+      await db.collection('convites').doc(savedCode).update({
+        aluno_progress: progressData,
         aluno_uid: currentUser.uid,
-        aluno_nome: STATE.perfil.nome || '',
-        aluno_email: currentUser.email || '',
-        orientador_email: STATE.perfil.orientador_email,
-        updated: new Date().toISOString(),
-        prog_metas: STATE.metas.filter(m=>m.done).length + '/' + STATE.metas.length,
-        ultima_reuniao: STATE.reunioes.length ? STATE.reunioes[STATE.reunioes.length-1].data : '',
-        docs_count: STATE.arquivos.length,
-        artigos_count: STATE.artigos.length,
-      });
+      }).catch(()=>
+        db.collection('convites').doc(savedCode).set({aluno_progress: progressData}, {merge:true})
+      );
     }
   }catch(e){ console.warn('Firestore save:', e); }
 }
@@ -1562,6 +1577,8 @@ async function checkAccess(user){
             usado_em: new Date().toISOString(),
             aluno_email: user.email
           });
+          // Save invite code for future syncs
+          localStorage.setItem('sopa_invite_code', inviteCode);
           // Salvar orientador automaticamente
           if(snap.data().orientador_email){
             STATE.perfil.orientador_email = snap.data().orientador_email;
