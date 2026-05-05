@@ -3957,7 +3957,7 @@ async function rmAAFile(id,fi){
 // ════════════ AGENDA ════════════
 function getCalEvents(){
   const evs={};
-  function addEv(date,label,desc,color,cat){if(!date)return;const d=date.slice(0,10);if(!evs[d])evs[d]=[];evs[d].push({label,desc,color,cat});}
+  function addEv(date,label,desc,color,cat,id){if(!date)return;const d=date.slice(0,10);if(!evs[d])evs[d]=[];evs[d].push({label,desc,color,cat,id});}
   DATA.art.forEach(it=>(it.dates||[]).forEach(dt=>addEv(dt.v,it.name,dt.l,CAL_COLORS.Artigos,'Artigos')));
   DATA.proj.forEach(it=>{
     (it.dates||[]).forEach(dt=>addEv(dt.v,it.name,dt.l,CAL_COLORS.Projetos,'Projetos'));
@@ -3965,7 +3965,21 @@ function getCalEvents(){
     (it.bancas||[]).filter(b=>b.data).forEach(b=>addEv(b.data,b.aluno,b.tipo,CAL_COLORS.Bancas,'Bancas'));
     (it.relatorios||[]).filter(r=>r.data&&r.status!=='entregue').forEach(r=>addEv(r.data,r.nome,'Relatório',CAL_COLORS.Relatorios,'Relatórios'));
   });
-  DATA_AA.forEach(it=>{if(it.data)addEv(it.data,it.name,it.cat,CAL_COLORS[it.cat.replace(/[^a-zA-Z]/g,'')]||CAL_COLORS.Outros,it.cat);});
+  DATA_AA.forEach(it=>{
+    if(!it.data) return;
+    const color = CAL_COLORS[it.cat.replace(/[^a-zA-Z]/g,'')] || CAL_COLORS.Outros;
+    addEv(it.data, it.name, it.cat, color, it.cat, it.id);
+    // Fill multi-day events
+    if(it.dataFim && it.dataFim > it.data){
+      let cur = new Date(it.data + 'T12:00:00');
+      const end = new Date(it.dataFim + 'T12:00:00');
+      cur.setDate(cur.getDate()+1);
+      while(cur <= end){
+        addEv(cur.toISOString().slice(0,10), it.name, it.cat, color, it.cat);
+        cur.setDate(cur.getDate()+1);
+      }
+    }
+  });
   return evs;
 }
 function openAgenda(){setCC('#8E24AA');show('sag');renderAgenda();}
@@ -3989,8 +4003,13 @@ function renderAgenda(){
   const dayHtml=selEvs.length?selEvs.map(e=>`<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--bd)">
     <div style="width:4px;min-height:30px;border-radius:2px;background:${e.color};flex-shrink:0;margin-top:3px"></div>
     <div style="flex:1"><div style="font-size:.8rem;font-weight:700;line-height:1.3">${e.label.slice(0,55)}</div>
-      <div style="display:flex;gap:5px;margin-top:3px"><span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${e.color}20;color:${e.color}">${e.cat}</span>
-      <span style="font-size:.62rem;color:var(--mu)">${e.desc}</span></div></div></div>`).join(''):
+      <div style="display:flex;gap:5px;margin-top:3px">
+        <span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${e.color}20;color:${e.color}">${e.cat}</span>
+        <span style="font-size:.62rem;color:var(--mu)">${e.desc}</span>
+      </div>
+    </div>
+    ${e.id!==undefined?`<button onclick="openModal('aa',${e.id})" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;color:#9CA3AF;font-size:.65rem;cursor:pointer;flex-shrink:0;">✏️</button>`:''}
+  </div>`).join(''):
     `<div style="text-align:center;padding:16px;color:var(--mu);font-size:.78rem">Nenhum evento neste dia</div>`;
   const allEvs=[];Object.entries(evs).forEach(([date,es])=>es.forEach(e=>allEvs.push({date,...e})));
   allEvs.sort((a,b)=>a.date.localeCompare(b.date));
@@ -11538,27 +11557,42 @@ function processAIActions(aiText, userText){
   // Schedule to agenda
   if(lower.includes('agenda') || lower.includes('agendar') || lower.includes('marcar') || lower.includes('programar')){
     if(aiLower.includes('agendado') || aiLower.includes('programad') || aiLower.includes('adicionei')){
-      // Extract dates from AI response (format: DD a DD de mês)
-      const dateMatch = aiText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i);
-      const yearMatch = aiText.match(/\b(202\d)\b/);
+      // Extract dates from text (user message and AI response combined)
+      const fullText = userText + ' ' + aiText;
+      const dateMatch = fullText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i)
+                     || fullText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      const yearMatch = fullText.match(/\b(202\d)\b/);
       const year = yearMatch ? yearMatch[1] : new Date().getFullYear();
       
+      let startDate = new Date().toISOString().slice(0,10);
+      let endDate = null;
+      if(dateMatch && dateMatch[3] && isNaN(dateMatch[3])){
+        // Format: DD a DD de mês
+        const m = getMonthNum(dateMatch[3]);
+        startDate = `${year}-${m}-${String(dateMatch[1]).padStart(2,'0')}`;
+        endDate   = `${year}-${m}-${String(dateMatch[2]).padStart(2,'0')}`;
+      }
+      
+      const taskText = userText.replace(/^(agende[i]?|agendar|marque[i]?|marcar|programe?[i]?)\s+/i,'').trim();
+      
       // Add to weekly tasks
-      const taskText = userText.replace(/^(agende|agendar|marque|marcar|programe?)\s+/i,'').trim();
       WEEK.push({t:'📅 '+taskText.slice(0,70), d:false});
       
-      // Also add to DATA_AA as event
+      // Add to DATA_AA with date range
       if(!DATA_AA) DATA_AA=[];
-      DATA_AA.push({
+      const newEvent = {
         id: nAAId++,
         name: taskText.slice(0,80),
         cat: 'Eventos',
         status: 'agendado',
-        data: dateMatch && yearMatch ? `${year}-${getMonthNum(dateMatch[3])}-${String(dateMatch[1]).padStart(2,'0')}` : new Date().toISOString().slice(0,10),
-        notas: aiText.slice(0,100),
+        data: startDate,
+        dataFim: endDate,
+        notas: 'Criado via SOPA IA',
         urgency:'media', pct:0, files:[], team:[], dates:[]
-      });
+      };
+      DATA_AA.push(newEvent);
       saveData();
+      toast('✅ Agendado: ' + taskText.slice(0,40));
     }
   }
 
