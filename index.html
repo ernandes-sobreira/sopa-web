@@ -2296,19 +2296,7 @@ function initFirebase(config) {
       show('s-login'); // show login while checking
       document.getElementById('topbar').style.display = 'none';
       document.getElementById('botNav').style.display = 'none';
-      auth.getRedirectResult().then(result => {
-        localStorage.removeItem('sopa_login_pending');
-        if (result && result.user) {
-          currentUser = result.user;
-          onUserLogin(result.user);
-        }
-      }).catch(e => {
-        localStorage.removeItem('sopa_login_pending');
-        console.error('Redirect result error:', e);
-        if (e.code !== 'auth/no-auth-event') {
-          toast('Erro no login: ' + e.message);
-        }
-      });
+      
     }
 
     // Listen for auth state changes
@@ -2343,7 +2331,7 @@ function loginGoogle() {
   if (isMobile) {
     // Mobile: use redirect (popup blocked by Android browsers)
     localStorage.setItem('sopa_login_pending', '1');
-    auth.signInWithRedirect(provider);
+    auth.signInWithPopup(provider);
   } else {
     // Desktop: use popup (faster, stays on page)
     auth.signInWithPopup(provider).then(result => {
@@ -2354,7 +2342,7 @@ function loginGoogle() {
       if (e.code === 'auth/popup-blocked') {
         // Fallback to redirect if popup blocked on desktop too
         localStorage.setItem('sopa_login_pending', '1');
-        auth.signInWithRedirect(provider);
+        auth.signInWithPopup(provider);
       } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
         toast('Erro no login: ' + e.message);
       }
@@ -12242,9 +12230,8 @@ function renderBuscaResults(q){
 }
 
 
-</script>
-</body>
-</html
+
+
 // ── BUILD COAUTHOR NETWORK from Lattes artigos ──
 function buildCoauthorNetwork(artigos){
   const coautCount = {};
@@ -12313,4 +12300,8 @@ function buildCoauthorNetwork(artigos){
 }
 
 
->
+
+</script>
+
+</body>
+</html>
