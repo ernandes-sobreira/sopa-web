@@ -6917,20 +6917,57 @@ function odDelReuniaoInline(oid, rid){
   o.reunioes=o.reunioes.filter(r=>(r.id||r.data)!=rid); saveData(); renderOrient();
 }
 function odAddMetaInline(oid){
-  const nome=prompt('Nome da meta:'); if(!nome)return;
-  const due=prompt('Prazo (opcional, ex: 2026-06-30):');
-  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
-  if(!o.metas)o.metas=[];
-  o.metas.push({id:'m'+Date.now(),nome,due:due||'',done:false});
-  saveData(); renderOrient();
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.85);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;padding:0;';
+  modal.innerHTML = `<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(0,212,255,.3);">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#00D4FF;font-weight:700;margin-bottom:14px;">🎯 NOVA META</div>
+    <input id="om-nome" placeholder="Nome da meta..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
+    <input id="om-due" type="date" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px;">
+    <div style="display:flex;gap:8px;">
+      <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>
+      <button id="om-save" style="flex:2;background:linear-gradient(135deg,#00D4FF,#A855F7);border:none;border-radius:10px;padding:12px;color:#050810;font-size:.85rem;font-weight:800;cursor:pointer;">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#om-save').onclick = ()=>{
+    const nome = modal.querySelector('#om-nome').value.trim();
+    if(!nome){ modal.querySelector('#om-nome').focus(); return; }
+    const due = modal.querySelector('#om-due').value;
+    const o = ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+    if(!o.metas)o.metas=[];
+    o.metas.push({id:'m'+Date.now(),nome,due:due||'',done:false});
+    saveData(); modal.remove(); renderOrient();
+  };
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+  setTimeout(()=>modal.querySelector('#om-nome').focus(),100);
 }
+
 function odAddReuniaoInline(oid){
-  const titulo=prompt('Assunto da reunião:'); if(!titulo)return;
-  const data=prompt('Data (ex: 2026-05-10):') || new Date().toISOString().slice(0,10);
-  const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
-  if(!o.reunioes)o.reunioes=[];
-  o.reunioes.push({id:'r'+Date.now(),titulo,data});
-  saveData(); renderOrient();
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.85);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;padding:0;';
+  modal.innerHTML = `<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(56,189,248,.3);">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#38BDF8;font-weight:700;margin-bottom:14px;">📋 NOVA REUNIÃO</div>
+    <input id="or-titulo" placeholder="Assunto da reunião..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
+    <input id="or-data" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
+    <textarea id="or-notas" placeholder="Notas (opcional)..." rows="2" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;resize:none;margin-bottom:14px;"></textarea>
+    <div style="display:flex;gap:8px;">
+      <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>
+      <button id="or-save" style="flex:2;background:linear-gradient(135deg,#38BDF8,#00FF88);border:none;border-radius:10px;padding:12px;color:#050810;font-size:.85rem;font-weight:800;cursor:pointer;">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#or-save').onclick = ()=>{
+    const titulo = modal.querySelector('#or-titulo').value.trim();
+    if(!titulo){ modal.querySelector('#or-titulo').focus(); return; }
+    const data = modal.querySelector('#or-data').value || new Date().toISOString().slice(0,10);
+    const notas = modal.querySelector('#or-notas').value.trim();
+    const o = ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
+    if(!o.reunioes)o.reunioes=[];
+    o.reunioes.push({id:'r'+Date.now(),titulo,data,notas});
+    saveData(); modal.remove(); renderOrient();
+  };
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+  setTimeout(()=>modal.querySelector('#or-titulo').focus(),100);
 }
 function odVincular(oid){
   const o=ORIENTANDOS.find(x=>x.id==oid); if(!o)return;
@@ -6977,7 +7014,7 @@ function renderOdSheet(){
             <div style="font-size:.82rem;font-weight:${m.done?400:600};color:${m.done?'#4B5563':'#E8EAED'};text-decoration:${m.done?'line-through':'none'};">${m.nome||m.name||''}</div>
             ${m.due?`<div style="font-size:.65rem;color:#6B7280;">📅 ${m.due}</div>`:''}
           </div>
-          <button onclick="odEditMeta('${o.id}','${m.id}')" style="background:none;border:none;color:#6B7280;cursor:pointer;font-size:.8rem;">✏️</button>
+          
           <button onclick="odDelMeta('${o.id}','${m.id}')" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:.8rem;">✕</button>
         </div>`).join('') : '<div style="color:#4B5563;font-size:.78rem;padding:8px 0;">Nenhuma meta ainda.</div>'}
     </div>`;
