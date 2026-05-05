@@ -3968,14 +3968,15 @@ function getCalEvents(){
   DATA_AA.forEach(it=>{
     if(!it.data) return;
     const color = CAL_COLORS[it.cat.replace(/[^a-zA-Z]/g,'')] || CAL_COLORS.Outros;
+    // Always add on start date
     addEv(it.data, it.name, it.cat, color, it.cat, it.id);
-    // Fill multi-day events
-    if(it.dataFim && it.dataFim > it.data){
+    // Fill ALL days in range
+    if(it.dataFim){
       let cur = new Date(it.data + 'T12:00:00');
       const end = new Date(it.dataFim + 'T12:00:00');
       cur.setDate(cur.getDate()+1);
       while(cur <= end){
-        addEv(cur.toISOString().slice(0,10), it.name, it.cat, color, it.cat);
+        addEv(cur.toISOString().slice(0,10), it.name, it.cat, color, it.cat, it.id);
         cur.setDate(cur.getDate()+1);
       }
     }
@@ -4741,7 +4742,20 @@ function prodRender(){
   searchIn.value=searchQuery;
   searchIn.addEventListener('input', e=>{searchQuery=e.target.value; prodRender();});
   const addBt = document.createElement('button');
-  addBt.className='add-btn'; addBt.innerHTML='<span style="font-size:1.1rem">＋</span> Adicionar'; addBt.onclick=openAdd;
+  addBt.innerHTML='＋';
+  addBt.title = 'Adicionar';
+  addBt.style.cssText = `
+    width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,var(--cc,#00D4FF),#A855F7);
+    color:#050810;font-size:1.3rem;font-weight:900;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 16px rgba(0,212,255,.35),0 4px 12px rgba(0,0,0,.4);
+    transition:all .18s;flex-shrink:0;
+    animation:cosmos-pulse 2.5s ease-in-out infinite;
+  `;
+  addBt.onmouseover = ()=>addBt.style.transform='scale(1.12)';
+  addBt.onmouseout  = ()=>addBt.style.transform='scale(1)';
+  addBt.onclick = openAdd;
   toolbar.appendChild(searchIn); toolbar.appendChild(addBt);
   wrap.appendChild(toolbar);
 
@@ -11558,7 +11572,11 @@ function processAIActions(aiText, userText){
   if(lower.includes('agenda') || lower.includes('agendar') || lower.includes('marcar') || lower.includes('programar')){
     if(aiLower.includes('agendado') || aiLower.includes('programad') || aiLower.includes('adicionei')){
       // Extract dates from text (user message and AI response combined)
+      // Try user message first (more reliable), then AI response
       const fullText = userText + ' ' + aiText;
+      // Also try to find dates directly in userText
+      const userDateMatch = userText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i)
+                         || userText.match(/(dias?)\s+(\d{1,2})\s+a\s+(\d{1,2})/i);
       const dateMatch = fullText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i)
                      || fullText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       const yearMatch = fullText.match(/\b(202\d)\b/);
