@@ -4122,9 +4122,7 @@ function renderPerfil(){
         ${PERFIL.orcid?`<a href="https://orcid.org/${PERFIL.orcid}" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;font-size:.65rem;font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;">ORCID</a>`:''}
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px">
-      ${stats.map(s=>`<div class="sm"><div class="sn" style="color:var(--cc)">${s.n}</div><div class="sl">${s.l}</div></div>`).join('')}
-    </div>
+    
     <div class="card">
       <div class="sti" style="margin-top:0">Informações pessoais</div>
       <label class="fl">Nome completo</label><input class="fi" id="pfN" value="${PERFIL.nome}" placeholder="Seu nome">
@@ -11468,7 +11466,7 @@ async function sendChat(){
   appendTyping(typingId);
 
   try{
-    const response = await fetch('https://api.anthropic.com/v1/messages',{
+    const response = await fetch('https://sopa-ia.ernandes-sobreira.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -11740,7 +11738,7 @@ window.sendChat = async function(){
   appendTyping(typingId);
 
   try{
-    const response = await fetch('https://api.anthropic.com/v1/messages',{
+    const response = await fetch('https://sopa-ia.ernandes-sobreira.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -11762,7 +11760,7 @@ window.sendChat = async function(){
   }catch(e){
     removeTyping(typingId);
     const errMsg = e.message.includes('401')||e.message.includes('403')
-      ? 'O assistente funciona quando você estiver no GitHub Pages com login Google.'
+      ? 'Erro de conexão. Verifique sua internet e tente novamente.'
       : `Erro: ${e.message.slice(0,60)}`;
     _chatHistory.push({role:'assistant', content:`❌ ${errMsg}`});
     renderChatMessages();
