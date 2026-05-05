@@ -2052,13 +2052,33 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
 
 <!-- TOPBAR (shown when logged in) -->
 <header class="topbar" id="topbar" style="display:none">
-  <div class="logo">S·<b>O·P·A</b></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button onclick="goHome()"
+      style="background:none;border:none;cursor:pointer;color:#00D4FF;
+      font-size:1.1rem;padding:4px;opacity:.8;transition:opacity .15s;line-height:1;"
+      title="Universo"
+      onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.8'">🌐</button>
+    <div class="logo" style="cursor:pointer;" onclick="goHome()">S·<b>O·P·A</b></div>
+  </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="sync-dot" id="syncDot" title="Sincronizado"></div>
     <span class="dpill" id="dEl"></span>
     <div class="user-av" id="userAv" onclick="openPerfil()" title="Perfil">👤</div>
   </div>
 </header>
+<button id="btn-universo" onclick="goHome()"
+  title="Voltar ao Universo"
+  style="position:fixed;top:12px;left:12px;z-index:200;
+  background:rgba(0,212,255,.15);border:1.5px solid rgba(0,212,255,.3);
+  border-radius:50%;width:36px;height:36px;
+  display:none;align-items:center;justify-content:center;
+  font-size:1rem;cursor:pointer;color:#00D4FF;
+  box-shadow:0 0 12px rgba(0,212,255,.2);
+  transition:all .15s;"
+  onmouseover="this.style.background='rgba(0,212,255,.25)'"
+  onmouseout="this.style.background='rgba(0,212,255,.15)'">
+  🌐
+</button>
 
 <!-- APP SCREENS -->
 <div id="sh"  class="sc" style="overflow:hidden;"></div>
@@ -2446,6 +2466,9 @@ function useDemoMode() {
 async function onUserLogin(user) {
   document.getElementById('topbar').style.display = 'flex';
   document.getElementById('botNav').style.display = 'flex';
+  // Universe button visible after login
+  const _ub = document.getElementById('btn-universo');
+  if(_ub) _ub.style.display = 'none'; // hidden on home by default
 
   // Update UI
   const av = document.getElementById('userAv');
@@ -2708,6 +2731,9 @@ function show(id){
   if(window._stopDrift) window._stopDrift();
   document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));
   $(id).classList.add('on');
+  // Show/hide universe button — hide only on home
+  const univBtn = document.getElementById('btn-universo');
+  if(univBtn) univBtn.style.display = (id==='sh') ? 'none' : 'flex';
 }
 function setCC(c){document.documentElement.style.setProperty('--cc',c||'#1C1C2E');}
 function toast(m){const t=$('tst');t.textContent=m;t.classList.add('sh');setTimeout(()=>t.classList.remove('sh'),2500);}
@@ -2817,7 +2843,7 @@ const HNODES = [
   {id:'projetos',    label:'Projetos',    sub:'ativos',        r:34, color:'#38BDF8', type:'main',   action:()=>openList('proj')},
   {id:'orientacao',  label:'Orientação',  sub:'alunos',        r:34, color:'#00FF88', type:'main',   action:()=>openOrient()},
   {id:'agenda',      label:'Agenda',      sub:'prazos',        r:34, color:'#FF4B6E', type:'main',   action:()=>openAgenda()},
-  {id:'ia',          label:'SOPA IA',     sub:'assistente',    r:34, color:'#A855F7', type:'main',   action:()=>openAssistente()},
+  {id:'ia',          label:'SOPA IA',     sub:'assistente',    r:34, color:'#A855F7', type:'main',   action:()=>openChat()},
   {id:'gestao',      label:'Gestão',      sub:'tools',         r:34, color:'#FF6B35', type:'main',   action:()=>openDashboard()},
   {id:'artigos',     label:'📄',  sub:'Artigos',      r:18, color:'#00D4FF', type:'sat', action:()=>openProducao('artigos')},
   {id:'citacoes',    label:'📰',  sub:'Citações',     r:18, color:'#FACC15', type:'sat', action:()=>openCitacoes()},
@@ -11509,13 +11535,40 @@ function processAIActions(aiText, userText){
   const lower = userText.toLowerCase();
   const aiLower = aiText.toLowerCase();
 
+  // Schedule to agenda
+  if(lower.includes('agenda') || lower.includes('agendar') || lower.includes('marcar') || lower.includes('programar')){
+    if(aiLower.includes('agendado') || aiLower.includes('programad') || aiLower.includes('adicionei')){
+      // Extract dates from AI response (format: DD a DD de mês)
+      const dateMatch = aiText.match(/(\d{1,2})\s+a\s+(\d{1,2})\s+de\s+(\w+)/i);
+      const yearMatch = aiText.match(/\b(202\d)\b/);
+      const year = yearMatch ? yearMatch[1] : new Date().getFullYear();
+      
+      // Add to weekly tasks
+      const taskText = userText.replace(/^(agende|agendar|marque|marcar|programe?)\s+/i,'').trim();
+      WEEK.push({t:'📅 '+taskText.slice(0,70), d:false});
+      
+      // Also add to DATA_AA as event
+      if(!DATA_AA) DATA_AA=[];
+      DATA_AA.push({
+        id: nAAId++,
+        name: taskText.slice(0,80),
+        cat: 'Eventos',
+        status: 'agendado',
+        data: dateMatch && yearMatch ? `${year}-${getMonthNum(dateMatch[3])}-${String(dateMatch[1]).padStart(2,'0')}` : new Date().toISOString().slice(0,10),
+        notas: aiText.slice(0,100),
+        urgency:'media', pct:0, files:[], team:[], dates:[]
+      });
+      saveData();
+    }
+  }
+
   // Create note in diary
   if((lower.includes('salvar') || lower.includes('anotar') || lower.includes('nota') || lower.includes('diário'))
-    && (lower.includes('campo') || lower.includes('nota') || lower.includes('salva'))){
+    && (lower.includes('campo') || lower.includes('nota') || lower.includes('salva') || lower.includes('anota'))){
     if(!DATA.diario) DATA.diario=[];
     DATA.diario.unshift({
-      id:'ai'+Date.now(), tipo:'insight',
-      texto:`💬 Conversa com SOPA IA:\n${userText}`,
+      id:'ai'+Date.now(), tipo:'nota',
+      texto:userText.replace(/^(salvar|anotar|nota[: ]|salva[: ])/i,'').trim(),
       data:new Date().toISOString().slice(0,10),
       hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
       timestamp:new Date().toISOString(),
@@ -12176,6 +12229,12 @@ function closeSidebar(){
 }
 
 
+
+function getMonthNum(monthName){
+  const months = {janeiro:'01',fevereiro:'02',março:'03',abril:'04',maio:'05',junho:'06',
+    julho:'07',agosto:'08',setembro:'09',outubro:'10',novembro:'11',dezembro:'12'};
+  return months[(monthName||'').toLowerCase()] || '01';
+}
 </script>
 
 </body>
