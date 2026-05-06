@@ -6966,7 +6966,7 @@ function renderOrient(){
           <div style="font-size:.7rem;color:#4B5563;">${ORIENTANDOS.length} cadastrados</div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button onclick="syncAlunoProgress()" style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:6px 12px;color:#00FF88;font-size:.68rem;font-weight:700;cursor:pointer;">🔄 Sync</button>
+          <button onclick="syncAndDebug()" style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:6px 12px;color:#00FF88;font-size:.68rem;font-weight:700;cursor:pointer;">🔄 Sync</button>
           <button onclick="odAddOrientando()" style="background:linear-gradient(135deg,#00D4FF,#A855F7);border:none;border-radius:8px;padding:6px 14px;color:#050810;font-size:.72rem;font-weight:800;cursor:pointer;">+ Novo</button>
         </div>
       </div>
@@ -13401,6 +13401,53 @@ function renderPareceresinBiblio(container){
         </div>
       </div>`).join('') +
   '</div>';
+}
+
+async function syncAndDebug(){
+  if(!FIREBASE_MODE || !db){
+    toast('❌ Firebase não conectado');
+    return;
+  }
+  const withCode = ORIENTANDOS.filter(o=>o.inviteCode);
+  if(!withCode.length){
+    toast('❌ Nenhum orientando tem código de convite. Clique em Vincular primeiro.');
+    return;
+  }
+  toast('🔄 Verificando '+withCode.length+' orientando(s)...');
+  
+  for(const o of withCode){
+    try{
+      // First push current data
+      await db.collection('shared_orient').doc(o.inviteCode).set({
+        metas: o.metas||[],
+        reunioes: o.reunioes||[],
+        docs: o.docs||[],
+        info:{
+          nome:o.nome, nivel:o.nivel, programa:o.programa, tema:o.tema,
+          orientador_nome: PERFIL?.nome||'Prof. Dr. Ernandes Sobreira',
+          orientador_email: currentUser?.email||''
+        },
+        prof_updated: new Date().toISOString(),
+        inviteCode: o.inviteCode
+      },{merge:true});
+      
+      // Then read back to confirm
+      const snap = await db.collection('shared_orient').doc(o.inviteCode).get();
+      if(snap.exists){
+        const d = snap.data();
+        toast('✅ '+o.nome.split(' ')[0]+': '+
+          (d.metas?.length||0)+' metas salvas no Firebase (código: '+o.inviteCode+')');
+      } else {
+        toast('❌ '+o.nome.split(' ')[0]+': Falha ao salvar no Firebase');
+      }
+    } catch(e){
+      toast('❌ Erro: '+e.message);
+      console.error('syncAndDebug:', e);
+    }
+  }
+  
+  // Also sync aluno updates back
+  syncAlunoProgress();
 }
 </script>
 
