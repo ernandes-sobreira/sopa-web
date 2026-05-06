@@ -2826,7 +2826,8 @@ function renderHome(){
 
   $('sh').innerHTML = `
     <div style="width:100%;height:100%;position:relative;overflow:hidden;">
-      <svg id="home-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;"></svg>
+      <canvas id="universe-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+      <svg id="home-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;z-index:1;"></svg>
       <button class="ai-fab" id="ai-fab" onclick="openChat()"
         style="position:absolute;bottom:16px;left:16px;display:flex;">🤖</button>
       <button class="fab" id="home-fab" onclick="openCapture()"
@@ -2841,7 +2842,7 @@ function renderHome(){
 
   // Profile photo handled in perfil screen
 
-  setTimeout(()=>buildHomeGraph(), 300);
+  setTimeout(()=>{ buildHomeGraph(); initUniverse(); }, 300);
   setTimeout(()=>{ renderAlertChips(); updateAlertBadge(); }, 700);
 }
 
@@ -6795,37 +6796,41 @@ function manualSyncAlunos(){
 }
 
 function syncAlunoProgress(){
-  if(!FIREBASE_MODE || typeof db === 'undefined') return;
-  toast('🔄 Sincronizando...');
+  if(!FIREBASE_MODE || typeof db === 'undefined'){
+    toast('❌ Firebase não conectado'); return;
+  }
+  const withCode = ORIENTANDOS.filter(o=>o.inviteCode);
+  if(!withCode.length){
+    toast('❌ Nenhum orientando vinculado. Clique em 🔗 Vincular primeiro.'); return;
+  }
+  toast('🔄 Sincronizando '+withCode.length+'...');
   let count = 0;
-  const promises = ORIENTANDOS.filter(o=>o.inviteCode).map(o=>{
+  const promises = withCode.map(o=>{
     return db.collection('shared_orient').doc(o.inviteCode).get()
       .then(doc=>{
-        if(!doc.exists) return;
+        if(!doc.exists){
+          // Doc doesn't exist yet — push professor data
+          pushToAluno(o);
+          return;
+        }
         const sd = doc.data();
-        // Get aluno done-status updates
-        if(sd.metas && sd.metas.length){
+        // Update done-status from aluno
+        if(sd.metas && sd.metas.length && o.metas.length){
           o.metas.forEach(pm=>{
             const am = sd.metas.find(m=>m.id===pm.id||m.nome===pm.nome);
-            if(am !== undefined) pm.done = am.done;
+            if(am) pm.done = am.done;
           });
         }
         if(sd.aluno_updated) o.ultimaAtualizacao = sd.aluno_updated;
         if(sd.aluno_uid) o.aluno_uid = sd.aluno_uid;
-        // Calculate pct from metas
         const done = o.metas.filter(m=>m.done).length;
         o.pct = o.metas.length ? Math.round(done/o.metas.length*100) : 0;
         count++;
-      }).catch(e=>console.warn('Sync',o.nome,e));
+      }).catch(e=>{ console.warn('Sync error:',e); toast('⚠️ '+e.message); });
   });
   Promise.all(promises).then(()=>{
-    if(count > 0){
-      saveData();
-      renderOrient();
-      toast('✅ '+count+' orientando(s) sincronizado(s)');
-    } else {
-      toast('ℹ️ Nenhuma atualização');
-    }
+    saveData(); renderOrient();
+    toast(count>0 ? '✅ Sincronizado!' : '📤 Dados enviados para aluno(s)');
   });
 }
 
@@ -6998,7 +7003,7 @@ function odAddMetaInline(oid){
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.85);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;padding:0;';
   modal.innerHTML = `<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(0,212,255,.3);">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#00D4FF;font-weight:700;margin-bottom:14px;">🎯 NOVA META</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#00D4FF;font-weight:800;margin-bottom:14px;">🎯 NOVA META</div>
     <input id="om-nome" placeholder="Nome da meta..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;">
     <input id="om-due" type="date" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px;">
     <div style="display:flex;gap:8px;">
@@ -7229,12 +7234,12 @@ function odAddOrientando(){
   const today = new Date().toISOString().slice(0,10);
   modal.innerHTML = '<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(0,212,255,.3);max-height:85vh;overflow-y:auto;">' +
     '<div style="font-family:monospace;font-size:.75rem;color:#00D4FF;font-weight:700;margin-bottom:14px;">🎓 NOVO ORIENTANDO</div>' +
-    '<input id="no-nome" placeholder="Nome completo..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<input id="no-nome" placeholder="Nome completo..." style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;padding:11px 14px;color:#F8FAFC;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     '<select id="no-nivel" style="width:100%;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     '<option value="Doutorado">Doutorado</option><option value="Mestrado">Mestrado</option><option value="IC">IC</option><option value="TCC">TCC</option></select>' +
     '<select id="no-prog" style="width:100%;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     '<option>PPGCA</option><option>ProfAgua</option><option>Graduação</option><option>Outro</option></select>' +
-    '<input id="no-tema" placeholder="Tema da pesquisa..." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<input id="no-tema" placeholder="Tema da pesquisa..." style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;padding:11px 14px;color:#F8FAFC;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     '<input id="no-inicio" type="date" value="'+today+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px;">' +
     '<div style="display:flex;gap:8px;">' +
     '<button id="no-cancel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>' +
@@ -13084,15 +13089,15 @@ function showEditOrientModal(oid){
   modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.88);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;';
   modal.innerHTML =
     '<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;border-top:2px solid rgba(255,255,255,.1);max-height:85vh;overflow-y:auto;">' +
-    '<div style="font-size:.75rem;font-weight:700;color:#9CA3AF;margin-bottom:14px;letter-spacing:.08em;">✏️ EDITAR ORIENTANDO</div>' +
-    '<input id="eo-nome" placeholder="Nome completo" value="'+(o.nome||'')+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
-    '<select id="eo-nivel" style="width:100%;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<div style="font-size:.75rem;font-weight:700;color:#E8EAED;margin-bottom:14px;letter-spacing:.08em;">✏️ EDITAR ORIENTANDO</div>' +
+    '<input id="eo-nome" placeholder="Nome completo" value="'+(o.nome||'')+'" style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;padding:11px 14px;color:#F8FAFC;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<select id="eo-nivel" style="width:100%;background:#1C2333;border:1.5px solid rgba(255,255,255,.2);border-radius:10px;padding:11px 14px;color:#F8FAFC;font-size:.88rem;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     ['Doutorado','Mestrado','IC','TCC'].map(v=>`<option value="${v}"${o.nivel===v?' selected':''}>${v}</option>`).join('') +
     '</select>' +
-    '<select id="eo-prog" style="width:100%;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<select id="eo-prog" style="width:100%;background:#1C2333;border:1.5px solid rgba(255,255,255,.2);border-radius:10px;padding:11px 14px;color:#F8FAFC;font-size:.88rem;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     ['PPGCA','ProfAgua','Graduação','Outro'].map(v=>`<option value="${v}"${o.programa===v?' selected':''}>${v}</option>`).join('') +
     '</select>' +
-    '<input id="eo-tema" placeholder="Tema da pesquisa" value="'+(o.tema||'')+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<input id="eo-tema" placeholder="Tema da pesquisa" value="'+(o.tema||'')+'" style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;padding:11px 14px;color:#F8FAFC;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
     '<input id="eo-email" placeholder="Email do aluno" value="'+(o.email||'')+'" type="email" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#E8EAED;font-size:.88rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:14px;">' +
     '<div style="display:flex;gap:8px;">' +
     '<button id="eo-cancel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>' +
@@ -13448,6 +13453,185 @@ async function syncAndDebug(){
   
   // Also sync aluno updates back
   syncAlunoProgress();
+}
+
+function initUniverse(){
+  const canvas = document.getElementById('universe-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let W, H, particles, connections;
+  const COLORS = ['#00D4FF','#0EA5E9','#00FF88','#A855F7','#FF6B35','#38BDF8'];
+
+  function resize(){
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function initParticles(){
+    const N = Math.min(55, Math.floor((W*H)/18000));
+    particles = Array.from({length:N}, (_, i)=>({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      r: Math.random()*3.5 + 1.2,
+      vx: (Math.random()-.5)*.35,
+      vy: (Math.random()-.5)*.35,
+      color: COLORS[i % COLORS.length],
+      alpha: Math.random()*.5+.3,
+      pulse: Math.random()*Math.PI*2,
+      pulseSpeed: Math.random()*.02+.008,
+    }));
+  }
+
+  // D3 force for dragging
+  let sim;
+  function initForce(){
+    if(typeof d3 === 'undefined') return;
+    sim = d3.forceSimulation(particles)
+      .force('charge', d3.forceManyBody().strength(-12))
+      .force('collision', d3.forceCollide(d=>d.r+8).strength(.4))
+      .alphaDecay(.02)
+      .velocityDecay(.6)
+      .on('tick', ()=>{
+        particles.forEach(p=>{
+          // wrap edges
+          if(p.x<-20) p.x=W+20;
+          if(p.x>W+20) p.x=-20;
+          if(p.y<-20) p.y=H+20;
+          if(p.y>H+20) p.y=-20;
+        });
+      });
+  }
+
+  // Drag
+  function addDrag(){
+    if(typeof d3 === 'undefined') return;
+    const overlay = d3.select(canvas);
+    let dragging = null;
+
+    function findNearest(ex, ey){
+      let best=null, bestD=999;
+      particles.forEach(p=>{
+        const d=Math.hypot(p.x-ex,p.y-ey);
+        if(d<bestD&&d<p.r*4+20){bestD=d;best=p;}
+      });
+      return best;
+    }
+
+    overlay.on('mousedown touchstart', function(e){
+      e.preventDefault();
+      const [ex,ey] = getCoords(e);
+      dragging = findNearest(ex,ey);
+      if(dragging){ dragging.fx=dragging.x; dragging.fy=dragging.y; sim?.alphaTarget(.3).restart(); }
+    });
+    overlay.on('mousemove touchmove', function(e){
+      if(!dragging) return;
+      e.preventDefault();
+      const [ex,ey] = getCoords(e);
+      dragging.fx=ex; dragging.fy=ey;
+    });
+    overlay.on('mouseup touchend', function(){
+      if(dragging){ dragging.fx=null; dragging.fy=null; sim?.alphaTarget(0); dragging=null; }
+    });
+  }
+
+  function getCoords(e){
+    const rect = canvas.getBoundingClientRect();
+    if(e.touches){ return [e.touches[0].clientX-rect.left, e.touches[0].clientY-rect.top]; }
+    return [e.clientX-rect.left, e.clientY-rect.top];
+  }
+
+  // Draw
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Background gradient
+    const g = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.7);
+    g.addColorStop(0,'rgba(13,27,42,.95)');
+    g.addColorStop(1,'rgba(5,8,16,1)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    const now = Date.now();
+
+    // Connections
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const a=particles[i], b=particles[j];
+        const dist=Math.hypot(a.x-b.x,a.y-b.y);
+        const maxDist = 120 + (W > 500 ? 40 : 0);
+        if(dist < maxDist){
+          const alpha = (1 - dist/maxDist) * .25;
+          const grd = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+          grd.addColorStop(0, a.color.replace(')',`,${alpha})`).replace('rgb','rgba').replace('#','').length > 10 ? hexToRgba(a.color, alpha) : hexToRgba(a.color,alpha));
+          grd.addColorStop(1, hexToRgba(b.color, alpha));
+          ctx.beginPath();
+          ctx.moveTo(a.x,a.y);
+          ctx.lineTo(b.x,b.y);
+          ctx.strokeStyle = grd;
+          ctx.lineWidth = .6 + (1-dist/maxDist)*.8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Particles
+    particles.forEach(p=>{
+      p.pulse += p.pulseSpeed;
+      const pAlpha = p.alpha + Math.sin(p.pulse)*.15;
+      const pr = p.r + Math.sin(p.pulse*.7)*.5;
+
+      // Glow
+      const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,pr*4);
+      glow.addColorStop(0, hexToRgba(p.color, pAlpha*.6));
+      glow.addColorStop(1, hexToRgba(p.color, 0));
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,pr*4,0,Math.PI*2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+
+      // Core
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,pr,0,Math.PI*2);
+      ctx.fillStyle = hexToRgba(p.color, pAlpha);
+      ctx.fill();
+
+      // Bright center dot
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,pr*.4,0,Math.PI*2);
+      ctx.fillStyle = hexToRgba('#ffffff', pAlpha*.8);
+      ctx.fill();
+
+      // Float (when no D3)
+      if(!sim){
+        p.x += p.vx; p.y += p.vy;
+        if(p.x<-10) p.x=W+10; if(p.x>W+10) p.x=-10;
+        if(p.y<-10) p.y=H+10; if(p.y>H+10) p.y=-10;
+      }
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  function hexToRgba(hex, alpha){
+    const r=parseInt(hex.slice(1,3),16)||0;
+    const g=parseInt(hex.slice(3,5),16)||0;
+    const b=parseInt(hex.slice(5,7),16)||0;
+    return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+  }
+
+  resize();
+  initParticles();
+
+  // Wait for D3 then init force
+  const waitD3 = setInterval(()=>{
+    if(typeof d3 !== 'undefined'){
+      clearInterval(waitD3);
+      initForce();
+      addDrag();
+    }
+  }, 100);
+
+  window.addEventListener('resize',()=>{ resize(); initParticles(); if(sim) sim.nodes(particles); });
+  draw();
 }
 </script>
 
