@@ -626,6 +626,7 @@ function enterApp(){
   }
   document.getElementById('sync-dot').style.background = FIREBASE_MODE ? '#22C55E' : '#F59E0B';
   showScreen('home');
+  startAlunoAutoSync();
 }
 
 async function saveFirestore(){
@@ -1715,6 +1716,44 @@ async function alunoSyncNow(){
     renderHome();
     toast('✅ Dados atualizados do orientador!');
   }catch(e){ toast('Erro: '+e.message); }
+}
+
+// Auto-refresh from professor every 30 seconds
+function startAlunoAutoSync(){
+  if(window._alunoSyncInterval) clearInterval(window._alunoSyncInterval);
+  window._alunoSyncInterval = setInterval(async()=>{
+    if(!FIREBASE_MODE || !currentUser) return;
+    const savedCode = localStorage.getItem('sopa_invite_code');
+    if(!savedCode) return;
+    try{
+      const snap = await db.collection('shared_orient').doc(savedCode).get();
+      if(!snap.exists) return;
+      const sd = snap.data();
+      const lastProf = sd.prof_updated || '';
+      const lastSeen = localStorage.getItem('sopa_last_prof_sync') || '';
+      if(lastProf === lastSeen) return; // Nothing new
+      // New data from professor!
+      if(sd.metas && sd.metas.length){
+        STATE.metas = sd.metas.map(pm=>{
+          const ex = (STATE.metas||[]).find(m=>m.id===pm.id||m.nome===pm.nome);
+          return ex ? {...pm, done:ex.done} : pm;
+        });
+      }
+      if(sd.reunioes && sd.reunioes.length){
+        const keys = new Set((STATE.reunioes||[]).map(r=>r.data+'|'+r.titulo));
+        STATE.reunioes = [...(STATE.reunioes||[]), ...sd.reunioes.filter(r=>!keys.has(r.data+'|'+r.titulo))];
+      }
+      if(sd.info){
+        STATE.perfil.orientador_nome = sd.info.orientador_nome || STATE.perfil.orientador_nome;
+        if(sd.info.orientador_email) STATE.perfil.orientador_email = sd.info.orientador_email;
+      }
+      localStorage.setItem('sopa_last_prof_sync', lastProf);
+      autoSave();
+      renderMetas();
+      renderHome();
+      toast('🔔 Orientador atualizou suas metas!');
+    }catch(e){ console.warn('autoSync:', e); }
+  }, 30000);
 }
 </script>
 </body>

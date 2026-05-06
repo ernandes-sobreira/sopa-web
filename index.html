@@ -2284,6 +2284,12 @@ button.item-action-btn{font-family:'Outfit',sans-serif;}
     <div class="biblio-tab" onclick="latteShowTab('revistas')">📖 Revistas</div>
     <div class="biblio-tab" onclick="latteShowTab('orient')">🎓 Orientações</div>
     <div class="biblio-tab" onclick="latteShowTab('insights')">💡 Insights</div>
+    <div class="biblio-tab" onclick="latteShowTab('artigos')">📄 Artigos</div>
+    <div class="biblio-tab" onclick="latteShowTab('resumos')">📝 Resumos</div>
+    <div class="biblio-tab" onclick="latteShowTab('bancas')">🏛️ Bancas</div>
+    <div class="biblio-tab" onclick="latteShowTab('redes')">🕸️ Redes</div>
+    <div class="biblio-tab" onclick="latteShowTab('citacoes')">📣 Citações</div>
+    <div class="biblio-tab" onclick="latteShowTab('pareceres')">📋 Pareceres</div>
   </div>
   <div id="biblioContent" style="max-width:720px;margin:0 auto;padding:10px 11px 80px"></div>
 </div>
@@ -2606,6 +2612,10 @@ function saveData(){
       DATA, DATA_AA, WEEK, PERFIL, ORIENTANDOS
     }));
   } catch(e){ console.warn('Save error:', e); }
+  // Push to shared_orient for any orientando with inviteCode
+  if(FIREBASE_MODE && db){
+    (ORIENTANDOS||[]).filter(o=>o.inviteCode).forEach(o=>pushToAluno(o));
+  }
   // Then schedule Firebase sync
   scheduleSync();
 }
@@ -2895,31 +2905,22 @@ function showNodeMenu(d, event){
 
 // ── UNIVERSO — TODOS OS MÓDULOS ──
 const HNODES = [
-  {id:'prof',        label:'Ernandes',    sub:'UNEMAT',        r:46, color:'#00D4FF', type:'center', action:()=>openPerfil()},
-  {id:'pesquisa',    label:'Artigos',     sub:'publicações',   r:34, color:'#00D4FF', type:'main',   action:()=>openProducao('artigos')},
-  {id:'projetos',    label:'Projetos',    sub:'ativos',        r:34, color:'#38BDF8', type:'main',   action:()=>openList('proj')},
-  {id:'orientacao',  label:'Orientação',  sub:'alunos',        r:34, color:'#00FF88', type:'main',   action:()=>openOrient()},
-  {id:'agenda',      label:'Agenda',      sub:'prazos',        r:34, color:'#FF4B6E', type:'main',   action:()=>openAgenda()},
-  {id:'ia',          label:'SOPA IA',     sub:'assistente',    r:34, color:'#A855F7', type:'main',   action:()=>openChat()},
-  {id:'gestao',      label:'Dashboard',   sub:'produtividade', r:34, color:'#FF6B35', type:'main',   action:()=>openDashboard()},
-  {id:'artigos',     label:'📄',  sub:'Artigos',      r:18, color:'#00D4FF', type:'sat', action:()=>openProducao('artigos')},
-  {id:'citacoes',    label:'📰',  sub:'Citações',     r:18, color:'#FACC15', type:'sat', action:()=>openCitacoes()},
+  {id:'prof',        label:'Ernandes',    sub:'UNEMAT',        r:52, color:'#00D4FF', type:'center', action:()=>openPerfil()},
+  {id:'pesquisa',    label:'Escrita',     sub:'em andamento',  r:38, color:'#00D4FF', type:'main',   action:()=>openProducao()},
+  {id:'projetos',    label:'Projetos',    sub:'ativos',        r:38, color:'#38BDF8', type:'main',   action:()=>openList('proj')},
+  {id:'orientacao',  label:'Orientação',  sub:'alunos',        r:38, color:'#00FF88', type:'main',   action:()=>openOrient()},
+  {id:'agenda',      label:'Agenda',      sub:'prazos',        r:38, color:'#FF4B6E', type:'main',   action:()=>openAgenda()},
+  {id:'ia',          label:'Inovação',    sub:'softwares',     r:39, color:'#A855F7', type:'main',   action:()=>openPlataformas()},
+  {id:'gestao',      label:'Dashboard',   sub:'produtividade', r:38, color:'#FF6B35', type:'main',   action:()=>openDashboard()},
   {id:'palestras',   label:'🎤',  sub:'Palestras',    r:18, color:'#FACC15', type:'sat', action:()=>openPalestras()},
-  {id:'redes',       label:'🕸️', sub:'Redes',        r:18, color:'#00E5CC', type:'sat', action:()=>openRedes()},
   {id:'biblio',      label:'📖',  sub:'Bibliometria', r:18, color:'#FACC15', type:'sat', action:()=>openBiblio()},
-  {id:'plataformas', label:'💻',  sub:'Plataformas',  r:18, color:'#A855F7', type:'sat', action:()=>openPlataformas()},
-  {id:'pipeline',    label:'💡',  sub:'Pipeline',     r:18, color:'#A855F7', type:'sat', action:()=>openPipeline()},
   {id:'consultoria', label:'🌿',  sub:'Consultoria',  r:18, color:'#00E5CC', type:'sat', action:()=>openConsultoria()},
   {id:'galeria',     label:'🖼️', sub:'Galeria',      r:18, color:'#FF6B35', type:'sat', action:()=>openGaleria()},
-  {id:'pareceres',   label:'📋',  sub:'Pareceres',    r:18, color:'#38BDF8', type:'sat', action:()=>openPareceres()},
   {id:'turmas',      label:'🏫',  sub:'Turmas',       r:18, color:'#00FF88', type:'sat', action:()=>openTurmas()},
-  {id:'diario',      label:'✏️', sub:'Diário',       r:18, color:'#00E5CC', type:'sat', action:()=>openDiario()},
   {id:'alertas',     label:'🔔',  sub:'Alertas',      r:18, color:'#FF4B6E', type:'sat', action:()=>openAlertScreen()},
-  {id:'dashboard',   label:'📋',  sub:'Burocracia',   r:18, color:'#FACC15', type:'sat', action:()=>openBurocracia()},
+  {id:'burocracia',  label:'🗂️', sub:'Administrativo', r:18, color:'#FACC15', type:'sat', action:()=>openBurocracia()},
   {id:'busca',       label:'🔍',  sub:'Busca',        r:18, color:'#E8EAED', type:'sat', action:()=>openBusca()},
   {id:'gmail',       label:'📧',  sub:'Gmail',        r:18, color:'#FF4B6E', type:'sat', action:()=>openGmail()},
-  {id:'perfil',      label:'👤',  sub:'Perfil',       r:18, color:'#00D4FF', type:'sat', action:()=>openPerfil()},
-  {id:'burocracia',  label:'🗂️', sub:'Burocracia',   r:18, color:'#FACC15', type:'sat', action:()=>openBurocracia()},
 ];
 
 const HLINKS = [
@@ -2929,24 +2930,16 @@ const HLINKS = [
   {s:'prof',       t:'agenda',      d:160},
   {s:'prof',       t:'ia',          d:160},
   {s:'prof',       t:'gestao',      d:160},
-  {s:'pesquisa',   t:'artigos',     d:90},
-  {s:'pesquisa',   t:'citacoes',    d:90},
+  {s:'prof',       t:'burocracia',  d:120},
   {s:'pesquisa',   t:'palestras',   d:90},
-  {s:'pesquisa',   t:'redes',       d:90},
   {s:'pesquisa',   t:'biblio',      d:90},
-  {s:'pesquisa',   t:'plataformas', d:90},
-  {s:'projetos',   t:'pipeline',    d:90},
   {s:'projetos',   t:'consultoria', d:90},
   {s:'projetos',   t:'galeria',     d:90},
-  {s:'orientacao', t:'pareceres',   d:90},
   {s:'orientacao', t:'turmas',      d:90},
-  {s:'agenda',     t:'diario',      d:90},
   {s:'agenda',     t:'alertas',     d:90},
   {s:'agenda',     t:'gmail',       d:90},
   {s:'ia',         t:'busca',       d:90},
   {s:'gestao',     t:'dashboard',   d:90},
-  {s:'gestao',     t:'perfil',      d:90},
-  {s:'gestao',     t:'burocracia',  d:90},
 ];
 
 function buildHomeGraph(){
@@ -2956,8 +2949,8 @@ function buildHomeGraph(){
   const W = window.innerWidth;
   const H = window.innerHeight - 56 - 48;
   const cx=W/2, cy=H/2;
-  const R1 = Math.min(W,H)*0.30;
-  const R2 = Math.min(W,H)*0.54;
+  const R1 = Math.min(W,H)*0.34;
+  const R2 = Math.min(W,H)*0.60;
 
   const mains = HNODES.filter(n=>n.type==='main');
 
@@ -2975,12 +2968,38 @@ function buildHomeGraph(){
       const si = sibs.findIndex(l=>l.t===d.id);
       const sc = sibs.length;
       const pa = par ? Math.atan2(par.y-cy, par.x-cx) : 0;
-      const spread = sc>1 ? (si/(sc-1)-0.5)*1.4 : 0;
-      d.x = cx+Math.cos(pa+spread)*R2;
-      d.y = cy+Math.sin(pa+spread)*R2;
+      // Wider spread for more satellites, less overlap
+      const spreadFactor = Math.min(2.2, 0.9 + sc * 0.28);
+      const spread = sc>1 ? (si/(sc-1)-0.5)*spreadFactor : 0;
+      const dist = R2 + (si%2)*20; // Alternate inner/outer ring
+      d.x = cx+Math.cos(pa+spread)*dist;
+      d.y = cy+Math.sin(pa+spread)*dist;
     }
     d.hx=d.x; d.hy=d.y; d.vx=0; d.vy=0;
   });
+
+  // Post-process: push overlapping nodes apart
+  const minDist = 42;
+  for(let iter=0; iter<60; iter++){
+    let moved = false;
+    for(let i=0; i<HNODES.length; i++){
+      for(let j=i+1; j<HNODES.length; j++){
+        const a=HNODES[i], b=HNODES[j];
+        if(a.type==='center'||b.type==='center') continue;
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const dist=Math.sqrt(dx*dx+dy*dy)||1;
+        if(dist<minDist){
+          const push=(minDist-dist)/2+2;
+          const nx=dx/dist, ny=dy/dist;
+          if(a.type!=='main'){ a.x-=nx*push; a.y-=ny*push; }
+          if(b.type!=='main'){ b.x+=nx*push; b.y+=ny*push; }
+          moved=true;
+        }
+      }
+    }
+    if(!moved) break;
+  }
+  HNODES.forEach(d=>{ if(d.type!=='center'){ d.hx=d.x; d.hy=d.y; } });
 
   d3.select(svgEl).selectAll('*').remove();
   const svg = d3.select(svgEl).attr('width',W).attr('height',H);
@@ -4743,23 +4762,17 @@ function _netRenderContent(id){
 // NAVEGAÇÃO — TELAS NOVAS
 // ════════════════════════════════════
 function openProducao(tabId){
-  tabId = tabId || 'artigos';
-  const colorMap = {
-    artigos:'#1D4ED8', bancas:'#6D28D9', resumos:'#B45309',
-    res_exp:'#C2410C', orientacoes:'#15803D', trab_tec:'#334155',
-    software:'#0E7490', apresent:'#BE123C', org_ev:'#B91C1C',
-    tv_radio:'#7E22CE', midia:'#0369A1', cursos:'#166534'
-  };
-  setCC(colorMap[tabId] || '#1E40AF');
+  // Now just opens Em Escrita directly
+  setCC('#1D4ED8');
   show('s-producao');
   if(!window._prodInit){
     window._prodInit = true;
     setTimeout(()=>{
       prodBuildTabs();
-      setTimeout(()=>{ prodSwitchTab(tabId); }, 20);
+      setTimeout(()=>prodSwitchTab('meus'), 20);
     }, 10);
   } else {
-    prodSwitchTab(tabId);
+    prodSwitchTab('meus');
   }
 }
 
@@ -4806,26 +4819,16 @@ const XML_DATA={"artigos":[["Net CO Emissions From Dry Inland Waters Persist in 
 const TABS = [
   {id:'artigos',    em:'📄', label:'Artigos',       key:'artigos',     filters:['Todos','2025','2024','2023','2022','2021','≤2020'],
    badges: r=>[{t:r[1],c:'year'},{t:r[2],c:'blue'}]},
-  {id:'bancas',     em:'🏛️', label:'Bancas',        key:'bancas',      filters:['Todos','Mestrado','Doutorado','Qualificação','TCC/Graduação'],
-   badges: r=>[{t:r[1],c:'year'},{t:r[2],c:r[2]==='Doutorado'?'purple':r[2]==='Mestrado'?'blue':'amber'},{t:r[3],c:'teal'}]},
   {id:'resumos',    em:'📝', label:'Resumos',       key:'resumos',     filters:['Todos','2024','2023','2022','2021','≤2020'],
    badges: r=>[{t:r[1],c:'year'},{t:r[2],c:'amber'}]},
   {id:'res_exp',    em:'📋', label:'Res.Exp.',      key:'res_exp',     filters:['Todos'],
    badges: r=>[{t:r[1],c:'year'},{t:r[2],c:'amber'}]},
-  {id:'orientacoes',em:'🎓', label:'Orient.',        key:'orientacoes', filters:['Todos','Mestrado','Doutorado'],
+  {id:'bancas',     em:'🏛️', label:'Bancas',        key:'bancas',      filters:['Todos','Mestrado','Doutorado','Qualificação','TCC/Graduação'],
+   badges: r=>[{t:r[1],c:'year'},{t:r[2],c:r[2]==='Doutorado'?'purple':r[2]==='Mestrado'?'blue':'amber'},{t:r[3],c:'teal'}]},
+  {id:'orientacoes',em:'🎓', label:'Orientações',   key:'orientacoes', filters:['Todos','Mestrado','Doutorado'],
    badges: r=>[{t:r[1],c:'year'},{t:r[2],c:r[2]==='Doutorado'?'purple':'blue'},{t:r[3],c:'teal'}]},
   {id:'trab_tec',   em:'⚙️', label:'Prod.Téc.',     key:'trab_tec',    filters:['Todos'],
    badges: r=>[{t:r[1],c:'year'},{t:r[2],c:'amber'}]},
-  {id:'software',   em:'💻', label:'Software',      key:'software',    filters:['Todos'],
-   badges: r=>[{t:r[1],c:'year'},{t:r[2],c:'green'}]},
-  {id:'apresent',   em:'🎤', label:'Apresent.',     key:'apresent',    filters:['Todos'],
-   badges: r=>[{t:r[1],c:'year'},{t:r[3],c:'amber'}]},
-  {id:'org_ev',     em:'🎪', label:'Org.Ev.',       key:'org_ev',      filters:['Todos'],
-   badges: r=>[{t:r[1],c:'year'}]},
-  {id:'tv_radio',   em:'📺', label:'TV/Rádio',      key:'tv_radio',    filters:['Todos'],
-   badges: r=>[{t:r[1],c:'year'},{t:r[2],c:'red'}]},
-  {id:'midia',      em:'🌐', label:'Mídia Digital', key:'midia',       filters:['Todos'],
-   badges: r=>[{t:r[1],c:'year'}]},
 ];
 
 
@@ -4840,14 +4843,13 @@ let activeFilter = 'Todos';
 // ════════════════════════════
 function prodBuildTabs(){
   const container = document.getElementById('prodTabs');
-  TABS.forEach(tab=>{
-    const data = XML_DATA[tab.key]||[];
-    const el = document.createElement('div');
-    el.className = 'prod-tab' + (tab.id===currentTab?' on':'');
-    el.innerHTML = `<span style='font-size:1rem'>${tab.em}</span><span>${tab.label}</span><span class="ct-n">${data.length}</span>`;
-    el.onclick = ()=>prodSwitchTab(tab.id);
-    container.appendChild(el);
-  });
+  // Only Em Escrita tab — rest is in Bibliometria
+  const myTab = document.createElement('div');
+  myTab.className = 'prod-tab on';
+  const myCount = (DATA.artigos_proprios||[]).length;
+  myTab.innerHTML = `<span style='font-size:1rem'>✍️</span><span>Em Escrita</span><span class="ct-n">${myCount}</span>`;
+  myTab.onclick = ()=>prodSwitchTab('meus');
+  container.appendChild(myTab);
 }
 
 function prodSwitchTab(id){
@@ -4860,6 +4862,7 @@ function prodSwitchTab(id){
 // RENDER
 // ════════════════════════════
 function prodRender(){
+  if(currentTab==='meus'){ renderMeusArtigos(); return; }
   const tab = TABS.find(t=>t.id===currentTab);
   if(!tab) return;
   const data = XML_DATA[tab.key]||[];
@@ -9178,11 +9181,7 @@ function extractTags(txt){
 }
 
 // ── OPEN FULL DIARY ──
-function openDiario(){
-  setCC('#00D4FF');
-  show('s-diario');
-  renderDiario();
-}
+function openDiario(){ openAnotacoes('diario'); }
 
 // ── RENDER DIARY ──
 function renderDiario(){
@@ -10579,7 +10578,7 @@ const PIPE_STATUS = [
 if(!DATA.pipeline) DATA.pipeline = [];
 let _pipeOpen = null;
 
-function openPipeline(){ setCC('#A855F7'); show('s-pipeline'); renderPipeline(); }
+function openPipeline(){ openAnotacoes(); }
 
 function renderPipeline(){
   const el = document.getElementById('pipeline-content');
@@ -12827,32 +12826,32 @@ const SIDEBAR_SECTIONS = [
     {icon:'🤖', label:'SOPA IA',       sub:'assistente inteligente', cor:'#00D4FF', action:'openAssistente()'},
     {icon:'📊', label:'Dashboard',     sub:'produtividade e métricas', cor:'#38BDF8', action:'openDashboard()'},
     {icon:'📅', label:'Agenda',        sub:'calendário e alertas',   cor:'#FF4B6E', action:'openAgenda()'},
-    {icon:'✏️', label:'Diário',        sub:'captura rápida de notas',cor:'#00E5CC', action:'openDiario()'},
+    
   ]},
   {title:'Produção Acadêmica', items:[
-    {icon:'📄', label:'Artigos & Pesquisa', sub:'publicações e Lattes',cor:'#00D4FF', action:"openProducao('artigos')"},
+    {icon:'✍️', label:'Artigos Escrita',   sub:'em andamento · submissões', cor:'#00D4FF', action:'openProducao()'},
     {icon:'🎤', label:'Palestras',     sub:'eventos e apresentações',cor:'#FACC15', action:'openPalestras()'},
-    {icon:'📰', label:'Citações',      sub:'Scholar · h-index',      cor:'#FACC15', action:'openCitacoes()'},
-    {icon:'🕸️', label:'Redes',        sub:'coautoria',               cor:'#00E5CC', action:'openRedes()'},
+    {icon:'📰', label:'Citações',      sub:'Scholar · h-index',      cor:'#FACC15', action:"openBiblio();setTimeout(()=>latteShowTab('citacoes'),300)"},
+    {icon:'🕸️', label:'Redes',        sub:'coautoria',               cor:'#00E5CC', action:"openBiblio();setTimeout(()=>latteShowTab('redes'),300)"},
     {icon:'📖', label:'Bibliometria',  sub:'Qualis e estatísticas',  cor:'#FACC15', action:'openBiblio()'},
-    {icon:'💻', label:'Plataformas',   sub:'74 softwares INPI',      cor:'#A855F7', action:'openPlataformas()'},
+    {icon:'💻', label:'Inovação',      sub:'74 softwares INPI',      cor:'#A855F7', action:'openPlataformas()'},
   ]},
   {title:'Orientação & Ensino', items:[
     {icon:'🎓', label:'Orientandos',   sub:'mestrado e doutorado',   cor:'#00FF88', action:'openOrient()'},
     {icon:'🏛️', label:'Bancas',       sub:'participações',           cor:'#A855F7', action:"openProducao('bancas')"},
-    {icon:'📋', label:'Pareceres',     sub:'revisões em andamento',  cor:'#38BDF8', action:'openPareceres()'},
+    {icon:'📋', label:'Pareceres',     sub:'revisões em andamento',  cor:'#38BDF8', action:"openBiblio();setTimeout(()=>latteShowTab('pareceres'),300)"},
     {icon:'🏫', label:'Turmas',        sub:'disciplinas',             cor:'#00FF88', action:'openTurmas()'},
   ]},
   {title:'Projetos & Gestão', items:[
     {icon:'🔬', label:'Projetos',      sub:'pesquisa e extensão',    cor:'#38BDF8', action:"openList('proj')"},
-    {icon:'💡', label:'Pipeline',      sub:'editais e ideias',        cor:'#A855F7', action:'openPipeline()'},
+    {icon:'📓', label:'Anotações',     sub:'pipeline e diário',       cor:'#A855F7', action:'openAnotacoes()'},
     {icon:'🌿', label:'Consultoria',   sub:'Japuira Ambiental',      cor:'#00E5CC', action:'openConsultoria()'},
     {icon:'🖼️', label:'Galeria',      sub:'fotos e arquivos',        cor:'#FF6B35', action:'openGaleria()'},
   ]},
   {title:'Conta & Configurações', items:[
     {icon:'👤', label:'Perfil',        sub:'minha página pública',   cor:'#00D4FF', action:'openPerfil()'},
     {icon:'📧', label:'Gmail',         sub:'e-mails importantes',    cor:'#FF4B6E', action:'openGmail()'},
-    {icon:'📋', label:'Burocracia',    sub:'atas e diárias',         cor:'#FACC15', action:'openBurocracia()'},
+    {icon:'📋', label:'Administrativo', sub:'atas, diárias e docs',   cor:'#FACC15', action:'openBurocracia()'},
   ]},
 ];
 
@@ -13128,10 +13127,281 @@ function pushToAluno(o){
     },
     prof_updated: new Date().toISOString(),
     inviteCode: o.inviteCode
-  },{merge:true}).then(()=>toast('📤 Enviado para '+o.nome.split(' ')[0]))
-   .catch(e=>console.warn('pushToAluno:',e));
+  },{merge:true}).catch(e=>console.warn('pushToAluno:',e));
 }
 
+
+// ── MEUS ARTIGOS EM ESCRITA ──
+function renderMeusArtigos(){
+  const el = document.getElementById('prodContent');
+  if(!el) return;
+  if(!DATA.artigos_proprios) DATA.artigos_proprios = [];
+  const arts = DATA.artigos_proprios;
+
+  const STATUS_COR = {
+    'Ideia': '#6B7280',
+    'Escrevendo': '#3B82F6',
+    'Revisão': '#F59E0B',
+    'Submetido': '#8B5CF6',
+    'Revisões': '#EC4899',
+    'Aceito': '#10B981',
+    'Publicado': '#00D4FF',
+  };
+
+  const cards = arts.length ? arts.map((a,i)=>`
+    <div style="background:${i%2===0?'#0D1117':'#1C2333'};border-radius:12px;padding:14px;margin-bottom:8px;border-left:3px solid ${STATUS_COR[a.status]||'#6B7280'};">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.88rem;font-weight:700;color:#E8EAED;margin-bottom:4px;">${a.titulo||'Sem título'}</div>
+          <div style="font-size:.7rem;color:#6B7280;margin-bottom:6px;">${a.revista||'Revista não definida'}${a.qualis?' · <span style="color:#FACC15;font-weight:700;">'+a.qualis+'</span>':''}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+            <span style="background:${STATUS_COR[a.status]||'#374151'}22;border:1px solid ${STATUS_COR[a.status]||'#374151'}44;border-radius:6px;padding:2px 8px;font-size:.65rem;font-weight:700;color:${STATUS_COR[a.status]||'#9CA3AF'};">${a.status||'Ideia'}</span>
+            ${a.prazo?`<span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:2px 8px;font-size:.65rem;color:#EF4444;">📅 ${a.prazo}</span>`:''}
+            ${a.coautores?`<span style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:6px;padding:2px 8px;font-size:.65rem;color:#00FF88;">👥 ${a.coautores.slice(0,30)}</span>`:''}
+          </div>
+          ${a.notas?`<div style="font-size:.72rem;color:#4B5563;border-top:1px solid rgba(255,255,255,.05);padding-top:6px;">${a.notas.slice(0,120)}${a.notas.length>120?'…':''}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+          <button data-action="edit-art" data-idx="${i}" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 8px;color:#9CA3AF;font-size:.72rem;cursor:pointer;">✏️</button>
+          <button data-action="del-art" data-idx="${i}" style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.12);border-radius:7px;padding:5px 8px;color:#EF4444;font-size:.72rem;cursor:pointer;">🗑️</button>
+        </div>
+      </div>
+    </div>`).join('')
+    : '<div style="text-align:center;padding:40px 20px;color:#4B5563;"><div style="font-size:2.5rem;margin-bottom:12px;">✍️</div><div style="font-size:.85rem;">Nenhum artigo ainda</div><div style="font-size:.72rem;margin-top:4px;">Clique em + Novo para começar</div></div>';
+
+  el.innerHTML = `
+    <div style="padding:0 0 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <div style="font-size:1rem;font-weight:800;color:#E8EAED;">✍️ Artigos em Escrita</div>
+          <div style="font-size:.7rem;color:#4B5563;">${arts.length} artigo(s)</div>
+        </div>
+        <button onclick="addMeuArtigo()" style="background:linear-gradient(135deg,#1D4ED8,#7C3AED);border:none;border-radius:10px;padding:8px 16px;color:white;font-size:.78rem;font-weight:800;cursor:pointer;">+ Novo</button>
+      </div>
+      ${cards}
+    </div>`;
+
+  // Event delegation for edit/delete
+  el.addEventListener('click', function handler(e){
+    const btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if(btn.dataset.action==='edit-art') editMeuArtigo(idx);
+    else if(btn.dataset.action==='del-art'){
+      if(confirm('Apagar artigo "'+arts[idx].titulo+'"?')){
+        DATA.artigos_proprios.splice(idx,1);
+        saveData(); renderMeusArtigos();
+      }
+    }
+  }, {once:true});
+}
+
+function addMeuArtigo(){ editMeuArtigo(null); }
+
+function editMeuArtigo(idx){
+  const arts = DATA.artigos_proprios || [];
+  const a = idx!==null ? {...arts[idx]} : {
+    titulo:'', revista:'', qualis:'', status:'Escrevendo',
+    coautores:'', prazo:'', doi:'', notas:''
+  };
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(5,8,16,.92);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;';
+
+  const statuses = ['Ideia','Escrevendo','Revisão','Submetido','Revisões','Aceito','Publicado'];
+  const qualisList = ['A1','A2','A3','A4','B1','B2','B3','B4','C','N/A'];
+
+  modal.innerHTML = '<div style="background:#0D1117;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;border-top:2px solid rgba(29,78,216,.4);max-height:90vh;overflow-y:auto;">' +
+    '<div style="font-size:.75rem;font-weight:700;color:#60A5FA;margin-bottom:14px;letter-spacing:.08em;">✍️ '+(idx!==null?'EDITAR':'NOVO ARTIGO')+'</div>' +
+    '<input id="ma-titulo" placeholder="Título do artigo..." value="'+(a.titulo||'')+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<input id="ma-revista" placeholder="Nome da revista/periódico..." value="'+(a.revista||'')+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+      '<select id="ma-status" style="flex:1;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;outline:none;">'+
+        statuses.map(s=>`<option value="${s}"${a.status===s?' selected':''}>${s}</option>`).join('')+
+      '</select>' +
+      '<select id="ma-qualis" style="flex:0 0 90px;background:#0D1117;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;outline:none;">'+
+        qualisList.map(q=>`<option value="${q}"${a.qualis===q?' selected':''}>${q}</option>`).join('')+
+      '</select>' +
+    '</div>' +
+    '<input id="ma-coautores" placeholder="Coautores (separados por vírgula)..." value="'+(a.coautores||'')+'" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px;">' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+      '<input id="ma-prazo" type="date" value="'+(a.prazo||'')+'" style="flex:1;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;font-family:inherit;outline:none;">' +
+      '<input id="ma-doi" placeholder="DOI..." value="'+(a.doi||'')+'" style="flex:2;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;font-family:inherit;outline:none;">' +
+    '</div>' +
+    '<textarea id="ma-notas" placeholder="Notas, observações, próximos passos..." rows="3" style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#E8EAED;font-size:.85rem;font-family:inherit;outline:none;resize:none;box-sizing:border-box;margin-bottom:14px;">'+(a.notas||'')+'</textarea>' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button id="ma-cancel" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;color:#6B7280;font-size:.85rem;cursor:pointer;">Cancelar</button>' +
+      '<button id="ma-save" style="flex:2;background:linear-gradient(135deg,#1D4ED8,#7C3AED);border:none;border-radius:10px;padding:12px;color:white;font-size:.85rem;font-weight:800;cursor:pointer;">Salvar</button>' +
+    '</div></div>';
+
+  document.body.appendChild(modal);
+  document.getElementById('ma-cancel').onclick = ()=>modal.remove();
+  document.getElementById('ma-save').onclick = ()=>{
+    const novo = {
+      titulo: document.getElementById('ma-titulo').value.trim(),
+      revista: document.getElementById('ma-revista').value.trim(),
+      status: document.getElementById('ma-status').value,
+      qualis: document.getElementById('ma-qualis').value,
+      coautores: document.getElementById('ma-coautores').value.trim(),
+      prazo: document.getElementById('ma-prazo').value,
+      doi: document.getElementById('ma-doi').value.trim(),
+      notas: document.getElementById('ma-notas').value.trim(),
+      criado: a.criado || new Date().toISOString().slice(0,10),
+    };
+    if(!novo.titulo){ document.getElementById('ma-titulo').focus(); return; }
+    if(!DATA.artigos_proprios) DATA.artigos_proprios = [];
+    if(idx!==null) DATA.artigos_proprios[idx] = novo;
+    else DATA.artigos_proprios.push(novo);
+    saveData(); modal.remove(); renderMeusArtigos();
+    // Update tab count
+    document.querySelector('.prod-tab')?.querySelector('.ct-n')?.textContent;
+    window._prodInit = false; // Force tabs rebuild
+    toast('✅ Artigo salvo!');
+  };
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+  setTimeout(()=>document.getElementById('ma-titulo').focus(), 100);
+}
+
+function renderCitacoesInBiblio(container){
+  if(!container) return;
+  // Reuse existing citacoes rendering
+  const tmp = document.getElementById('s-citacoes');
+  if(tmp) {
+    renderCitacoes();
+    container.innerHTML = tmp.innerHTML;
+  } else {
+    container.innerHTML = '<div id="citacoes-content"></div>';
+    setTimeout(()=>renderCitacoes(), 100);
+  }
+}
+
+function openAnotacoes(tab){
+  setCC('#A855F7');
+  show('s-pipeline');
+  window._anotacoesTab = tab || 'pipeline';
+  renderAnotacoes();
+}
+
+function renderAnotacoes(){
+  const el = document.getElementById('s-pipeline');
+  if(!el) return;
+  const tab = window._anotacoesTab || 'pipeline';
+
+  // Header with tabs
+  const header = `
+    <div style="padding:12px 14px 0;position:sticky;top:0;background:#0D1117;z-index:10;border-bottom:1px solid rgba(255,255,255,.07);">
+      <div style="font-size:1rem;font-weight:800;color:#E8EAED;margin-bottom:10px;">📓 Anotações</div>
+      <div style="display:flex;gap:6px;margin-bottom:0;">
+        <button onclick="window._anotacoesTab='pipeline';renderAnotacoes()"
+          style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:.75rem;font-weight:700;
+          background:${tab==='pipeline'?'rgba(168,85,247,.25)':'rgba(255,255,255,.06)'};
+          color:${tab==='pipeline'?'#A855F7':'#6B7280'};">💡 Pipeline</button>
+        <button onclick="window._anotacoesTab='diario';renderAnotacoes()"
+          style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:.75rem;font-weight:700;
+          background:${tab==='diario'?'rgba(0,212,255,.2)':'rgba(255,255,255,.06)'};
+          color:${tab==='diario'?'#00D4FF':'#6B7280'};">📔 Diário</button>
+      </div>
+    </div>
+    <div style="padding:10px 14px 80px;" id="anotacoes-body"></div>`;
+
+  el.innerHTML = header;
+
+  // Render the active tab content
+  if(tab === 'pipeline'){
+    renderPipeline();
+  } else {
+    renderDiario();
+  }
+}
+
+function renderProdTabInBiblio(tabId, container){
+  const tab = TABS.find(t=>t.id===tabId);
+  if(!tab || !container) return;
+  const data = XML_DATA[tab.key]||[];
+  if(!data.length){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#4B5563;">Nenhum registro encontrado</div>';
+    return;
+  }
+  container.innerHTML = '<div style="padding:8px 0;">' +
+    data.map((r,i)=>`
+      <div style="background:${i%2===0?'#0D1117':'#1C2333'};border-radius:10px;padding:10px 14px;margin-bottom:4px;">
+        <div style="font-size:.8rem;font-weight:600;color:#E8EAED;margin-bottom:4px;">${r[0]||''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${(tab.badges(r)||[]).map(b=>`<span style="background:rgba(255,255,255,.08);border-radius:5px;padding:1px 7px;font-size:.62rem;color:#9CA3AF;">${b.t||''}</span>`).join('')}
+        </div>
+      </div>`).join('') +
+  '</div>';
+}
+
+function biblioRedesTab(id, btn){
+  // Update button styles
+  document.querySelectorAll('#biblio-redes-wrap button').forEach(b=>{
+    b.style.background = 'rgba(255,255,255,.05)';
+    b.style.color = '#6B7280';
+    b.style.borderColor = 'rgba(255,255,255,.1)';
+  });
+  if(btn){
+    btn.style.background = 'rgba(0,229,204,.15)';
+    btn.style.color = '#00E5CC';
+    btn.style.borderColor = 'rgba(0,229,204,.3)';
+  }
+  const wrap = document.getElementById('biblio-redes-content');
+  if(!wrap) return;
+  const labels = {
+    coaut:'Rede de Coautoria em Artigos',
+    pesq:'Redes — Projetos de Pesquisa',
+    ext:'Redes — Projetos de Extensão'
+  };
+  wrap.innerHTML = `
+    <div style="font-size:.75rem;font-weight:700;color:#9CA3AF;margin-bottom:10px;">${labels[id]||''}</div>
+    <div id="biblio-net-wrap-${id}" style="width:100%;height:380px;border-radius:12px;overflow:hidden;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);">
+      <svg id="biblio-net-svg-${id}" style="width:100%;height:100%;"></svg>
+    </div>
+    <div id="biblio-net-tt-${id}" style="display:none;position:absolute;background:#0D1117;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:.72rem;color:#E8EAED;pointer-events:none;z-index:100;max-width:200px;"></div>`;
+  // Override container IDs temporarily and build
+  setTimeout(()=>{
+    const container = document.getElementById('biblio-net-wrap-'+id);
+    const svgEl = document.getElementById('biblio-net-svg-'+id);
+    const ttEl = document.getElementById('biblio-net-tt-'+id);
+    if(!container||!svgEl||typeof d3==='undefined') return;
+    const data = NET_DATA_SOPA[id];
+    if(!data) return;
+    // Temporarily rename IDs to match netBuildForce expectations
+    container.id = 'net-wrap-'+id;
+    svgEl.id = 'net-svg-'+id;
+    if(ttEl) ttEl.id = 'net-tt-'+id;
+    netBuildForce(id, data);
+    // Restore IDs
+    setTimeout(()=>{
+      const c = document.getElementById('net-wrap-'+id);
+      const s = document.getElementById('net-svg-'+id);
+      const t = document.getElementById('net-tt-'+id);
+      if(c) c.id = 'biblio-net-wrap-'+id;
+      if(s) s.id = 'biblio-net-svg-'+id;
+      if(t) t.id = 'biblio-net-tt-'+id;
+    }, 2000);
+  }, 100);
+}
+
+function renderPareceresinBiblio(container){
+  if(!container) return;
+  // Reuse existing pareceres data and render
+  const items = DATA.pareceres||[];
+  if(!items.length){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#4B5563;"><div style="font-size:2rem;margin-bottom:12px;">📋</div>Nenhum parecer registrado</div>';
+    return;
+  }
+  container.innerHTML = '<div style="padding:4px 0;">' +
+    items.map((p,i)=>`
+      <div style="background:${i%2===0?'#0D1117':'#1C2333'};border-radius:10px;padding:10px 14px;margin-bottom:4px;border-left:3px solid #38BDF8;">
+        <div style="font-size:.8rem;font-weight:600;color:#E8EAED;">${p.titulo||p.nome||'Parecer'}</div>
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+          ${p.revista?`<span style="font-size:.65rem;color:#38BDF8;">${p.revista}</span>`:''}
+          ${p.data||p.ano?`<span style="font-size:.65rem;color:#4B5563;">📅 ${p.data||p.ano}</span>`:''}
+          ${p.status?`<span style="font-size:.65rem;color:${p.status==='Concluído'?'#00FF88':'#FACC15'};">${p.status}</span>`:''}
+        </div>
+      </div>`).join('') +
+  '</div>';
+}
 </script>
 
 </body>
